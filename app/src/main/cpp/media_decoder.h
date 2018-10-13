@@ -52,6 +52,7 @@ private:
 
     static void *run(void *self);
 
+    void copyFrameData(uint8_t * dst, uint8_t * src, int width, int height, int linesize);
 private:
     char *mPath;
     pthread_t mDecoderThread;
@@ -72,21 +73,34 @@ private:
     AVFrame *mVideoFrame;
     AVFrame *mRgbFrame;
     AVFrame *mAudioFrame;
-    std::vector<VideoFrame> mVideoVec;
-    std::vector<AudioFrame> mAudioVec;
+    std::vector<VideoFrame*> mVideoVec;
+    std::vector<AudioFrame*> mAudioVec;
 };
 
 class VideoFrame {
 public:
-    int pts;
-    int frameCount;
+    double pts;
     int height;
     int width;
+    uint8_t * rgb;
+    long size;
+    long linesize;
 };
 
 class AudioFrame {
 public:
-    int position;
+    int samplerate;
+    int channelCount;
+    int pts;
+    char *samples;
+    int size;
+};
+
+class YuvVideoFrame : public VideoFrame {
+public:
+    uint8_t * luma;
+    uint8_t * chromaB;
+    uint8_t * chromaR;
 };
 
 #endif //SPLAYER_VIDEO_DECODER_H
