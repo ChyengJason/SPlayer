@@ -17,8 +17,9 @@ JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_printConfig(J
 extern "C"
 JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_prepare(JNIEnv *env, jobject instance, jstring path_) {
     const char *path = env->GetStringUTFChars(path_, 0);
-    mVideoDecoder = new MediaDecoder(path);
-    mVideoDecoder->start();
-
+    if (mVideoDecoder == NULL) {
+        mVideoDecoder = new MediaDecoder();
+    }
+    mVideoDecoder->start(path);
     env->ReleaseStringUTFChars(path_, path);
 }

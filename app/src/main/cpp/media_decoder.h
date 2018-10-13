@@ -14,27 +14,39 @@ extern "C" {
 #include "android_log.h"
 };
 
+class AudioFrame;
+class VideoFrame;
 /**
  * 负责解码音视频
  */
 class MediaDecoder {
 public:
-    MediaDecoder(const char *path);
+    MediaDecoder();
 
     ~MediaDecoder();
 
-    void start();
+    void start(const char *path);
 
 private:
     void createDecoderThread();
 
     void sleep(int sec);
 
-    bool initMediaInfo();
+    bool getMediaInfo();
 
     bool initVideoCodec();
 
     bool initAudioCodec();
+
+    bool initVideoFrameAndSwsContext();
+
+    bool initAudioFrameAndSwrContext();
+
+    void readFrames();
+
+    void decodeVideoFrame(AVPacket *pPacket);
+
+    void decodeAudioFrame(AVPacket *pPacket);
 
     void release();
 
@@ -52,8 +64,29 @@ private:
     AVCodec *mAudioCodec;
     int mVideoStreamIndex;
     int mAudioStreamIndex;
-    std::vector<int> mMediaVec;
-    std::vector<int> mAudioVec;
+
+    SwsContext* mSwsContext;
+    SwrContext* mSwrContext;
+    uint8_t *mAudioOutBuffer;
+    uint8_t *mVideoOutBuffer;
+    AVFrame *mVideoFrame;
+    AVFrame *mRgbFrame;
+    AVFrame *mAudioFrame;
+    std::vector<VideoFrame> mVideoVec;
+    std::vector<AudioFrame> mAudioVec;
+};
+
+class VideoFrame {
+public:
+    int pts;
+    int frameCount;
+    int height;
+    int width;
+};
+
+class AudioFrame {
+public:
+    int position;
 };
 
 #endif //SPLAYER_VIDEO_DECODER_H
