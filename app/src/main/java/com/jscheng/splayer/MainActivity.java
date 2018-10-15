@@ -3,28 +3,27 @@ package com.jscheng.splayer;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.SurfaceHolder;
 import android.widget.TextView;
 
 import com.jscheng.splayer.player.VideoPlayer;
 import com.jscheng.splayer.utils.PermissionUtil;
 import com.jscheng.splayer.utils.StorageUtil;
+import com.jscheng.splayer.widget.VideoSurfaceView;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback{
     private static final String TAG = "CJS";
     private static final int REQUEST_CODE = 1;
-    private TextView mTextview;
     private VideoPlayer mVideoPlayer;
+    private VideoSurfaceView mVideoView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mTextview = findViewById(R.id.sample_text);
+        mVideoView = findViewById(R.id.video_view);
         mVideoPlayer = new VideoPlayer();
-        boolean storePermission = PermissionUtil.checkPermissionsAndRequest(this, PermissionUtil.STORAGE, REQUEST_CODE, "申请读取文件失败");
-        if (storePermission) {
-            playMedia();
-        }
+        mVideoView.getHolder().addCallback(this);
     }
 
     @Override
@@ -36,6 +35,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void playMedia() {
-        mVideoPlayer.prepare(StorageUtil.getSDPath() + "/" + "media.mp4");
+        mVideoPlayer.prepare(StorageUtil.getSDPath() + "/" + "media.mp4", mVideoView.getHolder().getSurface());
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        boolean storePermission = PermissionUtil.checkPermissionsAndRequest(this,
+                PermissionUtil.STORAGE,
+                REQUEST_CODE,
+                "申请读取文件失败");
+        if (storePermission) {
+            playMedia();
+        }
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+
     }
 }

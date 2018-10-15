@@ -11,7 +11,7 @@ MediaDecoder::~MediaDecoder() {
 
 }
 
-bool MediaDecoder::start(const char* path) {
+bool MediaDecoder::prepare(const char* path) {
     mformatContext = NULL;
     mVideoCodecContext = NULL;
     mAudioCodecContext = NULL;
@@ -48,7 +48,7 @@ bool MediaDecoder::init(const char* path) {
     return true;
 }
 
-void MediaDecoder::end() {
+void MediaDecoder::finish() {
     release();
 }
 
@@ -206,21 +206,20 @@ VideoFrame* MediaDecoder::decodeVideoFrame() {
     pts *= av_q2d(mformatContext->streams[mVideoStreamIndex]->time_base);
     // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
 
-//    VideoFrame *videoFrame = new VideoFrame();
-//    videoFrame->pts = pts;
-//    videoFrame->height = mVideoCodecContext->height;
-//    videoFrame->width = std::min(mVideoCodecContext->width, mRgbFrame->linesize[0]);
-//    videoFrame->size =  videoFrame->width * videoFrame->height;
-//    videoFrame->linesize = mRgbFrame->linesize[0];
-//    videoFrame->rgb = new uint8_t[videoFrame->height * videoFrame->width];
-//    copyFrameData(videoFrame->rgb, mRgbFrame->data[0], videoFrame->width, videoFrame->height, videoFrame->linesize);
-//
-//    LOGE("视频解码 height: %d, size: %ld, pts: %f",videoFrame->width, videoFrame->size, videoFrame->pts);
-//    delete videoFrame;
+    VideoFrame *videoFrame = new VideoFrame();
+    videoFrame->pts = pts;
+    videoFrame->height = mVideoCodecContext->height;
+    videoFrame->width = std::min(mVideoCodecContext->width, mRgbFrame->linesize[0]);
+    videoFrame->size =  videoFrame->width * videoFrame->height;
+    videoFrame->linesize = mRgbFrame->linesize[0];
+    videoFrame->rgb = new uint8_t[videoFrame->height * videoFrame->width];
+    copyFrameData(videoFrame->rgb, mRgbFrame->data[0], videoFrame->width, videoFrame->height, videoFrame->linesize);
+
+    LOGE("视频解码 height: %d, size: %ld, pts: %f",videoFrame->width, videoFrame->size, videoFrame->pts);
+
     LOGE("视频解码 pts: %f", pts);
     av_free_packet(mTempPacket);
-    //return videoFrame;
-    return NULL;
+    return videoFrame;
 }
 
 std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame() {

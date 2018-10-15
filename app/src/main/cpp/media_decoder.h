@@ -24,7 +24,7 @@ public:
 
     ~MediaDecoder();
 
-    bool start(const char* path);
+    bool prepare(const char* path);
 
     bool readFrame(bool& isVideoFrame);
 
@@ -32,7 +32,7 @@ public:
 
     std::vector<AudioFrame*> decodeAudioFrame();
 
-    void end();
+    void finish();
 
 private:
     bool init(const char* path);

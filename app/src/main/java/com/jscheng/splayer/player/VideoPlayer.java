@@ -1,5 +1,7 @@
 package com.jscheng.splayer.player;
 
+import android.view.Surface;
+
 /**
  * Created By Chengjunsen on 2018/10/12
  */
@@ -16,7 +18,7 @@ public class VideoPlayer {
         System.loadLibrary("video-player-lib");
     }
 
-    public native void prepare(String path);
+    public native void prepare(String path, Surface surface);
 
     public native void printConfig();
 }

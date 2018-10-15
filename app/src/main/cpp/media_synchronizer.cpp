@@ -1,30 +1,34 @@
 //
 // Created by chengjunsen on 2018/10/12.
 //
-
 #include "media_synchronizer.h"
 
 MediaSynchronizer::MediaSynchronizer() {
     mMediaDecoder = NULL;
-    mPath = NULL;
+    mVideoOutput = NULL;
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
 
 }
 
-void MediaSynchronizer::start(const char *path) {
-    mPath = new char[strlen(path)];
-    strcpy(mPath, path);
+void MediaSynchronizer::prepare(const char *path) {
+    mMediaDecoder = new MediaDecoder();
+    mMediaDecoder->prepare(path);
+}
+
+void MediaSynchronizer::start() {
     startDecodeThread();
 }
 
 void MediaSynchronizer::finish() {
-
+    mMediaDecoder->finish();
+    delete mMediaDecoder;
+    mMediaDecoder = NULL;
+    mVideoOutput = NULL;
 }
 
 void MediaSynchronizer::startDecodeThread() {
-    mMediaDecoder = new MediaDecoder();
     pthread_cond_init(&mDecoderCond, NULL);
     pthread_mutex_init(&mDecoderMutex, NULL);
     int ret = pthread_create(&mDecoderThread, NULL, runDecoderThread, this);
@@ -35,16 +39,24 @@ void MediaSynchronizer::startDecodeThread() {
 
 void *MediaSynchronizer::runDecoderThread(void *self) {
     MediaSynchronizer* synchronizer = (MediaSynchronizer*)self;
-    MediaDecoder* dediaDecoder = synchronizer->mMediaDecoder;
-    dediaDecoder->start(synchronizer->mPath);
+    MediaDecoder* videoDecoder = synchronizer->mMediaDecoder;
     bool isVideoFrame;
-    while (dediaDecoder->readFrame(isVideoFrame)) {
+    while (videoDecoder->readFrame(isVideoFrame)) {
         if (isVideoFrame) {
-            dediaDecoder->decodeVideoFrame();
+            VideoFrame* frame = videoDecoder->decodeVideoFrame();
+            if (synchronizer->mVideoOutput != NULL) {
+                synchronizer->mVideoOutput->output(*frame);
+            }
+            free(frame->rgb);
+            delete frame;
         } else {
-            dediaDecoder->decodeAudioFrame();
+            videoDecoder->decodeAudioFrame();
         }
     }
-    dediaDecoder->end();
+    videoDecoder->finish();
     return 0;
+}
+
+void MediaSynchronizer::setVideoOutput(IVideoOutput *videoOutput) {
+    mVideoOutput = videoOutput;
 }
