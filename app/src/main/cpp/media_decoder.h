@@ -5,6 +5,7 @@
 #define SPLAYER_VIDEO_DECODER_H
 #include <string>
 #include <vector>
+#include "media_frame.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h" // 编码
@@ -14,8 +15,6 @@ extern "C" {
 #include "android_log.h"
 };
 
-class AudioFrame;
-class VideoFrame;
 /**
  * 负责解码音视频
  */
@@ -25,14 +24,20 @@ public:
 
     ~MediaDecoder();
 
-    void start(const char *path);
+    bool start(const char* path);
+
+    bool readFrame(bool& isVideoFrame);
+
+    VideoFrame* decodeVideoFrame();
+
+    std::vector<AudioFrame*> decodeAudioFrame();
+
+    void end();
 
 private:
-    void createDecoderThread();
+    bool init(const char* path);
 
-    void sleep(int sec);
-
-    bool getMediaInfo();
+    bool getMediaInfo(const char* path);
 
     bool initVideoCodec();
 
@@ -42,22 +47,12 @@ private:
 
     bool initAudioFrameAndSwrContext();
 
-    void readFrames();
-
-    void decodeVideoFrame(AVPacket *pPacket);
-
-    void decodeAudioFrame(AVPacket *pPacket);
+    bool initTempPacket();
 
     void release();
 
-    static void *run(void *self);
-
     void copyFrameData(uint8_t * dst, uint8_t * src, int width, int height, int linesize);
 private:
-    char *mPath;
-    pthread_t mDecoderThread;
-    pthread_cond_t mDecoderCond;
-    pthread_mutex_t mDecoderMutex;
     AVFormatContext *mformatContext;
     AVCodecContext *mVideoCodecContext;
     AVCodecContext *mAudioCodecContext;
@@ -68,39 +63,13 @@ private:
 
     SwsContext* mSwsContext;
     SwrContext* mSwrContext;
+    int mSwrBufferSize;
     uint8_t *mAudioOutBuffer;
     uint8_t *mVideoOutBuffer;
     AVFrame *mVideoFrame;
     AVFrame *mRgbFrame;
     AVFrame *mAudioFrame;
-    std::vector<VideoFrame*> mVideoVec;
-    std::vector<AudioFrame*> mAudioVec;
-};
-
-class VideoFrame {
-public:
-    double pts;
-    int height;
-    int width;
-    uint8_t * rgb;
-    long size;
-    long linesize;
-};
-
-class AudioFrame {
-public:
-    int samplerate;
-    int channelCount;
-    int pts;
-    char *samples;
-    int size;
-};
-
-class YuvVideoFrame : public VideoFrame {
-public:
-    uint8_t * luma;
-    uint8_t * chromaB;
-    uint8_t * chromaR;
+    AVPacket *mTempPacket;
 };
 
 #endif //SPLAYER_VIDEO_DECODER_H

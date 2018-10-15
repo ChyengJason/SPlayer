@@ -7,7 +7,11 @@
 
 
 class VideoPlayerController {
-
+public:
+    VideoPlayerController();
+    ~VideoPlayerController();
+    void start(const char *path);
+private:
 };
 
 

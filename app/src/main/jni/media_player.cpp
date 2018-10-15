@@ -3,10 +3,12 @@
 //
 #include <jni.h>
 #include <string>
-#include "../cpp/android_log.h"
-#include "../cpp/media_decoder.h"
+#include "../cpp/media_synchronizer.h"
 
-MediaDecoder* mVideoDecoder = NULL;
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include "../cpp/android_log.h"
+}
 
 extern "C"
 JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_printConfig(JNIEnv *env, jobject instance) {
@@ -17,9 +19,7 @@ JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_printConfig(J
 extern "C"
 JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_prepare(JNIEnv *env, jobject instance, jstring path_) {
     const char *path = env->GetStringUTFChars(path_, 0);
-    if (mVideoDecoder == NULL) {
-        mVideoDecoder = new MediaDecoder();
-    }
-    mVideoDecoder->start(path);
+    MediaSynchronizer *mSychronizer = new MediaSynchronizer;
+    mSychronizer->start(path);
     env->ReleaseStringUTFChars(path_, path);
 }
