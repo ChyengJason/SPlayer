@@ -27,7 +27,7 @@ Java_com_jscheng_splayer_player_VideoPlayer_prepare(JNIEnv *env, jobject instanc
     MediaSynchronizer *mSychronizer = new MediaSynchronizer;
     VideoOutput* mVideoOutput = new VideoOutput;
     mSychronizer->prepare(path);
-    mVideoOutput->prepare(nativeWindow);
+    mVideoOutput->onSurfaceCreated(nativeWindow, 1920, 1080);
     mSychronizer->setVideoOutput(mVideoOutput);
     mSychronizer->start();
     //mSychronizer->finish();

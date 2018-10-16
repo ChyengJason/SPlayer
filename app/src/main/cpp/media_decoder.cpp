@@ -209,15 +209,13 @@ VideoFrame* MediaDecoder::decodeVideoFrame() {
     VideoFrame *videoFrame = new VideoFrame();
     videoFrame->pts = pts;
     videoFrame->height = mVideoCodecContext->height;
-    videoFrame->width = std::min(mVideoCodecContext->width, mRgbFrame->linesize[0]);
-    videoFrame->size =  videoFrame->width * videoFrame->height;
+    videoFrame->width = mVideoCodecContext->width;
     videoFrame->linesize = mRgbFrame->linesize[0];
-    videoFrame->rgb = new uint8_t[videoFrame->height * videoFrame->width];
-    copyFrameData(videoFrame->rgb, mRgbFrame->data[0], videoFrame->width, videoFrame->height, videoFrame->linesize);
+    videoFrame->size =  videoFrame->height * mRgbFrame->linesize[0];
+    videoFrame->rgb = new uint8_t[videoFrame->size];
+    memcpy(videoFrame->rgb, mRgbFrame->data[0], videoFrame->size);
 
-    LOGE("视频解码 height: %d, size: %ld, pts: %f",videoFrame->width, videoFrame->size, videoFrame->pts);
-
-    LOGE("视频解码 pts: %f", pts);
+    LOGE("视频解码 linesize: %ld, size: %ld, pts: %f",videoFrame->linesize, videoFrame->size, videoFrame->pts);
     av_free_packet(mTempPacket);
     return videoFrame;
 }
@@ -317,10 +315,9 @@ void MediaDecoder::release() {
     }
 }
 
-void MediaDecoder::copyFrameData(uint8_t *dst, uint8_t *src, int width, int height, int linesize) {
-    for (int i = 0; i < height; i++) {
-        memcpy(dst, src, width);
-        dst += width;
-        src += linesize;
+int64_t MediaDecoder::getMediaDuration() {
+    if (mformatContext) {
+        return mformatContext->duration;
     }
+    return 0;
 }

@@ -34,6 +34,8 @@ public:
 
     void finish();
 
+    int64_t getMediaDuration();
+
 private:
     bool init(const char* path);
 
@@ -50,8 +52,6 @@ private:
     bool initTempPacket();
 
     void release();
-
-    void copyFrameData(uint8_t * dst, uint8_t * src, int width, int height, int linesize);
 private:
     AVFormatContext *mformatContext;
     AVCodecContext *mVideoCodecContext;
