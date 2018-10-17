@@ -5,19 +5,31 @@
 #define SPLAYER_AUDIOFRAME_H
 
 #include <string>
+#include "android_log.h"
 
 class VideoFrame {
 public:
+    VideoFrame():luma(NULL), chromaB(NULL), chromaR(NULL) {}
+    ~VideoFrame() {
+        LOGE("delete luma");
+        if (luma) delete(luma);
+        if (chromaB) delete(chromaB);
+        if (chromaR) delete(chromaR);
+    }
+    uint8_t * luma;
+    uint8_t * chromaB;
+    uint8_t * chromaR;
     double pts;
     int height;
     int width;
-    uint8_t * rgb;
-    long size;
-    long linesize;
 };
 
 class AudioFrame {
 public:
+    AudioFrame() : data(NULL) {}
+    ~AudioFrame() {
+        delete(data);
+    }
     int samplerate;
     int channelCount;
     double pts;
@@ -25,9 +37,5 @@ public:
     int size;
 };
 
-
 #endif //SPLAYER_AUDIOFRAME_H
 
-//uint8_t * luma;
-//uint8_t * chromaB;
-//uint8_t * chromaR;

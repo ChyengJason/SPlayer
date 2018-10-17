@@ -13,31 +13,28 @@ extern "C" {
 
 VideoOutput::VideoOutput() {
     mNativeWindow = NULL;
-    mEglCore = NULL;
-    mRenderHandlerMutex = NULL;
-    mRenderHandlerCond = NULL;
-    mSurface = NULL;
 }
 
 VideoOutput::~VideoOutput() {
-    if (mEglCore) {
-        delete(mEglCore);
-        mEglCore = NULL;
-    }
     pthread_cond_destroy(&mRenderHandlerCond);
     pthread_mutex_destroy(&mRenderHandlerMutex);
 }
 
-void VideoOutput::onSurfaceCreated(ANativeWindow *nativeWindow, int screenHeight, int screenWidth) {
+void VideoOutput::onCreated(ANativeWindow *nativeWindow, int width, int height) {
     mNativeWindow = nativeWindow;
+    screenHeight = height;
+    screenWidth = width;
     createRenderHandlerThread();
+    postMessage(MESSAGE_CREATE_CONTEXT);
 }
 
-void VideoOutput::onSurfaceDestroy() {
-    stop();
+void VideoOutput::onChangeSize(int width, int height) {
+    screenHeight = height;
+    screenWidth = width;
+    postMessage(MESSAGE_CHANGE_SIZE);
 }
 
-void VideoOutput::stop() {
+void VideoOutput::onDestroy() {
     postMessage(MESSAGE_QUIT);
 }
 
@@ -51,6 +48,7 @@ void VideoOutput::output(const VideoFrame &videoFrame) {
     if (videoFrame.width <= 0 || videoFrame.height <= 0) {
         return;
     }
+    postMessage(MESSAGE_RENDER);
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
@@ -81,14 +79,20 @@ void VideoOutput::processMessages() {
             LOGE("processMessages 失败");
             return ;
         }
-        Message msg = dequeueHandlerMessage();
+        Message msg = dequeueMessageHandler();
         if (msg == MESSAGE_NONE) {
             LOGE("MESSAGE_NONE 等待");
             pthread_cond_wait(&mRenderHandlerCond, &mRenderHandlerMutex);
             LOGE("MESSAGE_NONE 结束唤醒");
         } else if (msg == MESSAGE_CREATE_CONTEXT) {
             LOGE("MESSAGE_CREATE_CONTEXT");
-            createHandlerEglContext();
+            createEglContextHandler();
+        } else if (msg == MESSAGE_RENDER) {
+            LOGE("MESSAGE_RENDER");
+            renderTextureHandler();
+        } else if (msg == MESSAGE_CHANGE_SIZE) {
+            LOGE("MESSAGE_CHANGE_SIZE");
+            changeSizeHanlder();
         } else if (msg == MESSAGE_QUIT) {
             LOGE("MESSAGE_QUIT");
             releaseRenderHanlder();
@@ -98,7 +102,7 @@ void VideoOutput::processMessages() {
     }
 }
 
-Message VideoOutput::dequeueHandlerMessage() {
+Message VideoOutput::dequeueMessageHandler() {
     int lockCode = pthread_mutex_lock(&mRenderHandlerMutex);
     if (lockCode != 0) {
         LOGE("postMessage lock 失败");
@@ -115,18 +119,25 @@ Message VideoOutput::dequeueHandlerMessage() {
     return msg;
 }
 
-void VideoOutput::createHandlerEglContext() {
-    mEglCore = new EglCore;
-    mEglCore->createGL();
-    mSurface = mEglCore->createWindowSurface(mNativeWindow);
-    mEglCore->makeCurrent(mSurface);
+void VideoOutput::createEglContextHandler() {
+    mEglCore.createGL();
+    mSurface = mEglCore.createWindowSurface(mNativeWindow);
+    mEglCore.makeCurrent(mSurface);
+    mGlRender.prepare(screenWidth, screenHeight);
+
 }
 
 void VideoOutput::releaseRenderHanlder() {
-    mEglCore->destroySurface(mSurface);
-    mEglCore->destroyGL();
-    delete mEglCore ;
-    mEglCore = NULL;
+    mEglCore.destroySurface(mSurface);
+    mEglCore.destroyGL();
     ANativeWindow_release(mNativeWindow);
 }
 
+void VideoOutput::renderTextureHandler() {
+    int textureId = 0;
+    //mGlRender.draw(textureId);
+}
+
+void VideoOutput::changeSizeHanlder() {
+    mGlRender.changeSize(screenWidth, screenHeight);
+}

@@ -18,7 +18,7 @@ bool MediaDecoder::prepare(const char* path) {
     mVideoCodec = NULL;
     mAudioCodec = NULL;
     mVideoFrame = NULL;
-    mRgbFrame = NULL;
+    mYuvFrame = NULL;
     mAudioFrame = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
@@ -128,13 +128,20 @@ bool MediaDecoder::initAudioCodec() {
 
 bool MediaDecoder::initVideoFrameAndSwsContext() {
     mVideoFrame = av_frame_alloc();
-    mRgbFrame = av_frame_alloc();
-    // 关联缓存区
-    mVideoOutBuffer = (uint8_t *)av_malloc(avpicture_get_size(AV_PIX_FMT_RGBA, mVideoCodecContext->width, mVideoCodecContext->height));
-    avpicture_fill((AVPicture*)mRgbFrame, mVideoOutBuffer, AV_PIX_FMT_RGBA, mVideoCodecContext->width, mVideoCodecContext->height);
-    // 视频图像的转换, 比如格式转换
-    mSwsContext = sws_getContext(mVideoCodecContext->width, mVideoCodecContext->height, mVideoCodecContext->pix_fmt,
-                                 mVideoCodecContext->width, mVideoCodecContext->height, AV_PIX_FMT_RGBA, SWS_BICUBIC, NULL, NULL, NULL);
+
+    if (mVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P) {
+        mYuvFrame = av_frame_alloc();
+        // 关联缓存区
+        mVideoOutBuffer = (uint8_t *)av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height));
+        avpicture_fill((AVPicture*)mYuvFrame, mVideoOutBuffer, AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height);
+        // 视频图像的转换, 比如格式转换
+        mSwsContext = sws_getContext(mVideoCodecContext->width, mVideoCodecContext->height, mVideoCodecContext->pix_fmt,
+                                     mVideoCodecContext->width, mVideoCodecContext->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+        LOGE("创建YUV420p转换器");
+    } else {
+        mYuvFrame = NULL;
+        mSwsContext = NULL;
+    }
     LOGE("视频宽度: %d, 高度: %d", mVideoCodecContext->width, mVideoCodecContext->height);
     return true;
 }
@@ -181,41 +188,34 @@ bool MediaDecoder::readFrame(bool &isVideoFrame) {
 }
 
 VideoFrame* MediaDecoder::decodeVideoFrame() {
+    VideoFrame *videoFrame = NULL;
+    char buffer[] = "";
     int frameCount;
     double pts;
     int error;
-    char buffer[] = "";
     if (mTempPacket == NULL || mTempPacket->stream_index != mVideoStreamIndex) {
         return NULL;
     }
-    // 解码
+    // 解码图像数据：RGBA格式保存在data[0] ，YUV格式有data[0] data[1] data[2]
     error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, mTempPacket);
-    // 转换成RGBA格式，后续要改为转成YUV格式->渲染成Texture->gles->播放
-    // RGBA格式，解码图像数据只保存在data[0] lineSize[0] 中。但如果是YUV就会有data[0] data[1] data[2]
-    int height = sws_scale(mSwsContext, (const uint8_t *const *)mVideoFrame->data, mVideoFrame->linesize, 0, mVideoFrame->height,
-              mRgbFrame->data, mRgbFrame->linesize);
-    if (error < 0) {
-        av_strerror(error, buffer, 1024);
-        LOGE("decodeVideoFrame失败: %d(%s)", error, buffer);
-        return NULL;
-    }
-
+    // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
     if ((pts = av_frame_get_best_effort_timestamp(mVideoFrame)) == AV_NOPTS_VALUE) {
         pts = 0;
     }
     pts *= av_q2d(mformatContext->streams[mVideoStreamIndex]->time_base);
-    // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
-
-    VideoFrame *videoFrame = new VideoFrame();
-    videoFrame->pts = pts;
-    videoFrame->height = mVideoCodecContext->height;
-    videoFrame->width = mVideoCodecContext->width;
-    videoFrame->linesize = mRgbFrame->linesize[0];
-    videoFrame->size =  videoFrame->height * mRgbFrame->linesize[0];
-    videoFrame->rgb = new uint8_t[videoFrame->size];
-    memcpy(videoFrame->rgb, mRgbFrame->data[0], videoFrame->size);
-
-    LOGE("视频解码 linesize: %ld, size: %ld, pts: %f",videoFrame->linesize, videoFrame->size, videoFrame->pts);
+    // 若非YUV420p格式
+    if (mSwsContext && mYuvFrame) {
+        sws_scale(mSwsContext, (const uint8_t *const *)mVideoFrame->data, mVideoFrame->linesize, 0, mVideoFrame->height,
+                  mYuvFrame->data, mYuvFrame->linesize);
+        if (error < 0) {
+            av_strerror(error, buffer, 1024);
+            LOGE("decodeVideoFrame失败: %d(%s)", error, buffer);
+            return videoFrame;
+        }
+        videoFrame = createVideoFrame(pts, mYuvFrame);
+    } else {
+        videoFrame = createVideoFrame(pts, mYuvFrame);
+    }
     av_free_packet(mTempPacket);
     return videoFrame;
 }
@@ -267,10 +267,63 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame() {
     return audioFrames;
 }
 
+int64_t MediaDecoder::getMediaDuration() {
+    if (mformatContext) {
+        return mformatContext->duration;
+    }
+    return 0;
+}
+
+AudioFrame *MediaDecoder::createAudioFrame(double pts, int samplerate, int channelCount, uint8_t* data) {
+    AudioFrame* audioFrame = new AudioFrame;
+    audioFrame->pts = pts;
+    audioFrame->samplerate = samplerate;
+    audioFrame->channelCount = channelCount;
+    //audioFrame->size
+    return NULL;
+}
+
+VideoFrame *MediaDecoder::createVideoFrame(double pts, AVFrame *videoFrame) {
+    VideoFrame* yuvFrame = new VideoFrame;
+    yuvFrame->width = mVideoCodecContext->width;
+    yuvFrame->height = mVideoCodecContext->height;
+    yuvFrame->pts = pts;
+
+    int width = std::min(videoFrame->linesize[0], mVideoCodecContext->width);
+    int height = mVideoCodecContext->height;
+    int lumaLength = width * height;
+    uint8_t * luma = new uint8_t[lumaLength];
+    copyFrameData(luma, videoFrame->data[0], width, height, videoFrame->linesize[0]);
+    yuvFrame->luma = luma;
+
+    width = std::min(videoFrame->linesize[1], mVideoCodecContext->width / 2);
+    height = mVideoCodecContext->height / 2;
+    int chromaBLength = width * height;
+    uint8_t * chromaB = new uint8_t[chromaBLength];
+    copyFrameData(chromaB, videoFrame->data[1], width, height, videoFrame->linesize[1]);
+    yuvFrame->chromaB = chromaB;
+
+    width = std::min(videoFrame->linesize[2], mVideoCodecContext->width / 2);
+    height = mVideoCodecContext->height / 2;
+    int chromaRLength = width * height;
+    uint8_t * chromaR = new uint8_t[chromaRLength];
+    copyFrameData(chromaR, videoFrame->data[2], width, height, videoFrame->linesize[2]);
+    yuvFrame->chromaR = chromaR;
+    return yuvFrame;
+}
+
+void MediaDecoder::copyFrameData(uint8_t * dst, uint8_t * src, int width, int height, int linesize) {
+    for (int i = 0; i <height; ++i) {
+        memcpy(dst, src, width);
+        dst += width;
+        src += linesize;
+    }
+}
+
 void MediaDecoder::release() {
-    if (mRgbFrame) {
-        av_frame_free(&mRgbFrame);
-        mRgbFrame = NULL;
+    if (mYuvFrame) {
+        av_frame_free(&mYuvFrame);
+        mYuvFrame = NULL;
     }
     if (mVideoFrame) {
         av_frame_free(&mVideoFrame);
@@ -313,11 +366,4 @@ void MediaDecoder::release() {
         avformat_free_context(mformatContext);
         mformatContext = NULL;
     }
-}
-
-int64_t MediaDecoder::getMediaDuration() {
-    if (mformatContext) {
-        return mformatContext->duration;
-    }
-    return 0;
 }

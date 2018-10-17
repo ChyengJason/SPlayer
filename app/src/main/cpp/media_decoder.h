@@ -52,6 +52,13 @@ private:
     bool initTempPacket();
 
     void release();
+
+    VideoFrame *createVideoFrame(double pts, AVFrame *videoFrame);
+
+    AudioFrame *createAudioFrame(double pts, int samplerate, int channelCount, uint8_t* data);
+
+    void copyFrameData(uint8_t *dst, uint8_t *src, int width, int height, int linesize);
+
 private:
     AVFormatContext *mformatContext;
     AVCodecContext *mVideoCodecContext;
@@ -67,8 +74,8 @@ private:
     uint8_t *mAudioOutBuffer;
     uint8_t *mVideoOutBuffer;
     AVFrame *mVideoFrame;
-    AVFrame *mRgbFrame;
     AVFrame *mAudioFrame;
+    AVFrame *mYuvFrame;
     AVPacket *mTempPacket;
 };
 

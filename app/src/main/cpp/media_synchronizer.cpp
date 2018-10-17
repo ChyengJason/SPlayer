@@ -47,7 +47,6 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
             if (synchronizer->mVideoOutput != NULL) {
                 synchronizer->mVideoOutput->output(*frame);
             }
-            free(frame->rgb);
             delete frame;
         } else {
             videoDecoder->decodeAudioFrame();

@@ -8,6 +8,7 @@
 #include <android/native_window_jni.h>
 #include "media_frame.h"
 #include "egl/egl_core.h"
+#include "render/gl_render.h"
 #include <queue>
 
 class IVideoOutput {
@@ -19,35 +20,42 @@ enum Message {
     MESSAGE_CREATE_CONTEXT,
     MESSAGE_QUIT,
     MESSAGE_NONE,
-    MESSAGE_RENDER
+    MESSAGE_RENDER,
+    MESSAGE_CHANGE_SIZE
 };
 
 class VideoOutput : public virtual IVideoOutput {
 public:
     VideoOutput();
     ~VideoOutput();
-    void onSurfaceCreated(ANativeWindow *nativeWindow, int screenHeight, int screenWidth);
-    void onSurfaceDestroy();
+    void onCreated(ANativeWindow *nativeWindow, int screenWidth, int screenHeight);
+    void onChangeSize(int screenWidth, int screenHeigth);
+    void onDestroy();
     virtual void output(const VideoFrame& videoFrame);
-    void stop();
     bool postMessage(Message msg);
 
 private:
-    void createHandlerEglContext();
+    void createEglContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
+    void renderTextureHandler();
     void processMessages();
-    Message dequeueHandlerMessage();
+    Message dequeueMessageHandler();
     static void* renderHandlerThread(void* self);
 
 private:
     ANativeWindow *mNativeWindow;
-    EglCore* mEglCore;
+    EglCore mEglCore;
+    GlRender mGlRender;
     EGLSurface  mSurface;
+    int screenWidth;
+    int screenHeight;
     pthread_t mRenderHandlerThread;
     pthread_mutex_t mRenderHandlerMutex;
     pthread_cond_t mRenderHandlerCond;
     std::queue<Message> mHandlerMessageQueue;
+
+    void changeSizeHanlder();
 };
 
 
