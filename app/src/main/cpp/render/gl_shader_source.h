@@ -8,20 +8,20 @@
 namespace GlShaderSource {
 
     const char * VERTEX_BASE_SOURCE = ""
-            "attribute vec4 position;   "
-            "attribute vec2 texcoord;   "
-            "varying vec2 v_texcoord;   "
-            "void main() {"
-            "  gl_Position = position;  "
-            "  v_texcoord = texcoord;   "
+            "attribute vec4 position;   \n"
+            "attribute vec2 texcoord;   \n"
+            "varying vec2 v_texcoord;   \n"
+            "void main() {          \n"
+            "  v_texcoord = texcoord;   \n"
+            "  gl_Position = position;  \n"
             "} ";
 
     const char * FRAGMENT_BASE_SOURCE = ""
-            "precision mediump float;   "
-            "varing vec2 v_texcoord;    "
-            "uniform sampler2D sample_texture"
-            "void main() {"
-            "  gl_FragColor = texture2D(sample_texture, v_texcoord); "
+            "precision mediump float;   \n"
+            "varying vec2 v_texcoord;    \n"
+            "uniform sampler2D sample_texture; \n"
+            "void main() {          \n"
+            "  gl_FragColor = texture2D(sample_texture, v_texcoord); \n"
             "} ";
 
 };

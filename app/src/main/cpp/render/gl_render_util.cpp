@@ -5,7 +5,7 @@
 #include "gl_render_util.h"
 #include "../android_log.h"
 
-int GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
+GLuint GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
     int program = glCreateProgram();
     glAttachShader(program, vertexShader);
     checkError("AttachVertexShader");
@@ -38,7 +38,7 @@ void GlRenderUtil::deleteProgram(int program) {
     glDeleteProgram(program);
 }
 
-int GlRenderUtil::loadShader(GLenum shaderType, const char* shaderSource) {
+GLuint GlRenderUtil::loadShader(GLenum shaderType, const char* shaderSource) {
     int shader = glCreateShader(shaderType);
     glShaderSource(shader, 1, &shaderSource, NULL);
     glCompileShader(shader);
@@ -50,7 +50,7 @@ int GlRenderUtil::loadShader(GLenum shaderType, const char* shaderSource) {
         char* log = new char[len];
         glGetShaderInfoLog(shader, len, NULL, log);
         LOGE("createProgam: link error");
-        LOGE("createProgam: %s", log);
+        LOGE("createProgam error: %s", log);
         glDeleteShader(shader);
         delete[] log;
         return -1;
@@ -58,7 +58,7 @@ int GlRenderUtil::loadShader(GLenum shaderType, const char* shaderSource) {
     return shader;
 }
 
-int GlRenderUtil::createTexture(int width, int height) {
+GLuint GlRenderUtil::createTexture(int width, int height) {
     if (width <= 0 || height <= 0 ) {
         LOGE("cretaeTexture width or height <= 0");
         return -1;
@@ -83,7 +83,7 @@ int GlRenderUtil::createTexture(int width, int height) {
     return texture;
 }
 
-int GlRenderUtil::createExternalTexture() {
+GLuint GlRenderUtil::createExternalTexture() {
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture);
@@ -101,21 +101,21 @@ void GlRenderUtil::checkError(const char *tip) {
     }
 }
 
-int GlRenderUtil::createPixelsBuffer() {
+GLuint GlRenderUtil::createPixelsBuffer() {
     GLuint buffer;
     glGenBuffers(1, &buffer);
     checkError("createPixelsBuffer");
     return buffer;
 }
 
-int GlRenderUtil::createFrameBuffer() {
+GLuint GlRenderUtil::createFrameBuffer() {
     GLuint buffer;
     glGenFramebuffers(1, &buffer);
     checkError("createFrameBuffer");
     return buffer;
 }
 
-int GlRenderUtil::createRenderBuffer() {
+GLuint GlRenderUtil::createRenderBuffer() {
     GLuint buffer;
     glGenRenderbuffers(1, &buffer);
     checkError("createRenderBuffer");

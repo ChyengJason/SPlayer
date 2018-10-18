@@ -13,25 +13,25 @@
 
 namespace GlRenderUtil {
 
-    int createProgram(int vertexShader, int fragmentShader);
+    GLuint createProgram(int vertexShader, int fragmentShader);
 
     void useProgram(int program);
 
     void deleteProgram(int program);
 
-    int loadShader(GLenum shaderType, const char* shaderSource);
+    GLuint loadShader(GLenum shaderType, const char* shaderSource);
 
-    int createTexture(int width, int height);
+    GLuint createTexture(int width, int height);
 
-    int createExternalTexture();
+    GLuint createExternalTexture();
 
     void checkError(const char* tip);
 
-    int createPixelsBuffer();
+    GLuint createPixelsBuffer();
 
-    int createFrameBuffer();
+    GLuint createFrameBuffer();
 
-    int createRenderBuffer();
+    GLuint createRenderBuffer();
 
     void bindFrameTexture(int frameBufferId, int textureId);
 

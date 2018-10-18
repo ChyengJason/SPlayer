@@ -19,7 +19,8 @@ public:
     EGLSurface  createWindowSurface(ANativeWindow* nativeWindow);
     bool makeCurrent(EGLSurface draw, EGLSurface read);
     bool makeCurrent(EGLSurface surface);
-
+    bool swapBuffers(EGLSurface surface);
+    EGLContext getShareContext();
 private:
     bool setDisplay(EGLNativeDisplayType type);
     bool setConfig(int configs[]);

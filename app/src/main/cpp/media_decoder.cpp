@@ -214,7 +214,7 @@ VideoFrame* MediaDecoder::decodeVideoFrame() {
         }
         videoFrame = createVideoFrame(pts, mYuvFrame);
     } else {
-        videoFrame = createVideoFrame(pts, mYuvFrame);
+        videoFrame = createVideoFrame(pts, mVideoFrame);
     }
     av_free_packet(mTempPacket);
     return videoFrame;

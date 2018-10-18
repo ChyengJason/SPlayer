@@ -11,10 +11,10 @@ class GlRender {
 public:
     GlRender();
     ~GlRender();
-    void prepare(int width, int height);
-    void changeSize(int widht, int height);
-    void destroy();
-    void draw(int textureId);
+    void onCreated();
+    void onChangeSize(int widht, int height);
+    void onDestroy();
+    void onDraw(int textureId);
 
 private:
     int loadVertexShader();
@@ -24,10 +24,10 @@ private:
 private:
     int screenWidth;
     int screenHeight;
-    int program;
-    int vexPosition;
-    GLuint fragCoord;
-    GLuint fragTexture;
+    GLuint program;
+    GLint vexPosition;
+    GLint fragCoord;
+    GLint fragTexture;
     GLuint verPosArrayBufferId;
     GLuint fragCoordArrayBufferId;
 };

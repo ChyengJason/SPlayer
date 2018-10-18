@@ -18,7 +18,27 @@ public class VideoPlayer {
         System.loadLibrary("video-player-lib");
     }
 
-    public native void prepare(String path, Surface surface);
+    public native void onSurfaceCreated(Surface surface);
+
+    public native void onSurfaceSizeChanged(int width, int height);
+
+    public native void onSurfaceDestroy();
 
     public native void printConfig();
+
+    public native void start(String path);
+
+    public native void stop();
+
+    public native void seek(double position);
+
+    public native void pause();
+
+    public native void resume();
+
+    public native long getDuration();
+
+    public native long getProgress();
+
+
 }

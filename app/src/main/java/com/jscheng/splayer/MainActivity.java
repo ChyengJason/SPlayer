@@ -40,16 +40,17 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     }
 
     private void playMedia() {
-        mVideoPlayer.prepare(StorageUtil.getSDPath() + "/" + "media.mp4", mVideoView.getHolder().getSurface());
+        mVideoPlayer.start(StorageUtil.getSDPath() + "/" + "media.mp4");
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-
+        mVideoPlayer.onSurfaceCreated(holder.getSurface());
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        mVideoPlayer.onSurfaceSizeChanged(width, height);
         boolean storePermission = PermissionUtil.checkPermissionsAndRequest(this,
                 PermissionUtil.STORAGE,
                 REQUEST_CODE,
@@ -61,6 +62,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-
+        mVideoPlayer.onSurfaceDestroy();
     }
 }

@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.4.1)
 
-include_directories(${CMAKE_SOURCE_DIR}/libs/include)
-
 add_library(avcodec-56 SHARED IMPORTED)
 set_target_properties(avcodec-56 PROPERTIES IMPORTED_LOCATION
                       ${CMAKE_SOURCE_DIR}/libs/armeabi/libavcodec-56.so)
@@ -47,6 +45,8 @@ add_library(video-player-lib SHARED
 
 find_library(log-lib log )
 
+include_directories(${CMAKE_SOURCE_DIR}/libs/include)
+
 target_link_libraries( video-player-lib
                        avfilter-5
                        avcodec-56
@@ -57,5 +57,7 @@ target_link_libraries( video-player-lib
                        swresample-1
                        swscale-3
                        ${log-lib}
+                       EGL
+                       GLESv3
                        android
                        OpenSLES)

@@ -40,9 +40,7 @@ GlRender::~GlRender() {
 
 }
 
-void GlRender::prepare(int width, int height) {
-    screenWidth = width;
-    screenHeight = height;
+void GlRender::onCreated() {
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
     vexPosition = glGetAttribLocation(program, "position");
     fragCoord = glGetAttribLocation(program, "texcoord");
@@ -50,12 +48,12 @@ void GlRender::prepare(int width, int height) {
     createVertexBufferObjects();
 }
 
-void GlRender::changeSize(int width, int height) {
+void GlRender::onChangeSize(int width, int height) {
     screenWidth = width;
     screenHeight = height;
 }
 
-void GlRender::destroy() {
+void GlRender::onDestroy() {
     GlRenderUtil::deleteProgram(program);
     glDeleteBuffers(1, &verPosArrayBufferId);
     glDeleteBuffers(1, &fragCoordArrayBufferId);
@@ -71,7 +69,7 @@ int GlRender::loadFragmentShader() {
     return shader;
 }
 
-void GlRender::draw(int textureId) {
+void GlRender::onDraw(int textureId) {
     GlRenderUtil::useProgram(program);
     glViewport(0, 0, screenWidth, screenHeight);
     glClearColor(1.0f, 1.0f, 1.0f, 0.0f);

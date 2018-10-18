@@ -112,3 +112,11 @@ bool EglCore::makeCurrent(EGLSurface draw, EGLSurface read) {
     eglMakeCurrent(mEglDisplay, draw, read, mShareEglContext);
     return false;
 }
+
+bool EglCore::swapBuffers(EGLSurface surface) {
+    return eglSwapBuffers(mEglDisplay, surface);
+}
+
+EGLContext EglCore::getShareContext() {
+    return mShareEglContext;
+}

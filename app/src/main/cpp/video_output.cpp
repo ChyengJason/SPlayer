@@ -3,9 +3,7 @@
 //
 
 #include "video_output.h"
-extern "C" {
 #include "android_log.h"
-}
 
 extern "C" {
 #include <unistd.h>
@@ -20,10 +18,9 @@ VideoOutput::~VideoOutput() {
     pthread_mutex_destroy(&mRenderHandlerMutex);
 }
 
-void VideoOutput::onCreated(ANativeWindow *nativeWindow, int width, int height) {
+void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
     mNativeWindow = nativeWindow;
-    screenHeight = height;
-    screenWidth = width;
+    LOGE("当前主线程：%lu", (unsigned long)pthread_self());
     createRenderHandlerThread();
     postMessage(MESSAGE_CREATE_CONTEXT);
 }
@@ -41,10 +38,10 @@ void VideoOutput::onDestroy() {
 void VideoOutput::createRenderHandlerThread() {
     pthread_mutex_init(&mRenderHandlerMutex, NULL);
     pthread_cond_init(&mRenderHandlerCond, NULL);
-    pthread_create(&mRenderHandlerThread, 0, renderHandlerThread, this);
+    pthread_create(&mRenderHandlerThread, NULL, renderHandlerThread, this);
 }
 
-void VideoOutput::output(const VideoFrame &videoFrame) {
+void VideoOutput::output(VideoFrame &videoFrame) {
     if (videoFrame.width <= 0 || videoFrame.height <= 0) {
         return;
     }
@@ -52,6 +49,7 @@ void VideoOutput::output(const VideoFrame &videoFrame) {
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
+    LOGE("当前Handler线程：%lu", (unsigned long)pthread_self());
     VideoOutput* mOutput = (VideoOutput*) self;
     // handler处理消息
     mOutput->processMessages();
@@ -62,7 +60,6 @@ void *VideoOutput::renderHandlerThread(void *self) {
 bool VideoOutput::postMessage(Message msg) {
     int lockCode = pthread_mutex_lock(&mRenderHandlerMutex);
     if (lockCode != 0) {
-        LOGE("postMessage lock 失败");
         return false;
     }
     mHandlerMessageQueue.push(msg);
@@ -70,7 +67,6 @@ bool VideoOutput::postMessage(Message msg) {
     pthread_mutex_unlock(&mRenderHandlerMutex);
     return true;
 }
-
 void VideoOutput::processMessages() {
     bool isQuited = true;
     while (isQuited) {
@@ -79,65 +75,65 @@ void VideoOutput::processMessages() {
             LOGE("processMessages 失败");
             return ;
         }
-        Message msg = dequeueMessageHandler();
-        if (msg == MESSAGE_NONE) {
-            LOGE("MESSAGE_NONE 等待");
+        if (mHandlerMessageQueue.empty()) {
+            LOGE("MESSAGE 等待");
             pthread_cond_wait(&mRenderHandlerCond, &mRenderHandlerMutex);
-            LOGE("MESSAGE_NONE 结束唤醒");
-        } else if (msg == MESSAGE_CREATE_CONTEXT) {
-            LOGE("MESSAGE_CREATE_CONTEXT");
-            createEglContextHandler();
-        } else if (msg == MESSAGE_RENDER) {
-            LOGE("MESSAGE_RENDER");
-            renderTextureHandler();
-        } else if (msg == MESSAGE_CHANGE_SIZE) {
-            LOGE("MESSAGE_CHANGE_SIZE");
-            changeSizeHanlder();
-        } else if (msg == MESSAGE_QUIT) {
-            LOGE("MESSAGE_QUIT");
-            releaseRenderHanlder();
-            isQuited = true;
+            LOGE("MESSAGE 结束唤醒");
+            pthread_mutex_unlock(&mRenderHandlerMutex);
+            continue;
+        }
+        Message msg = mHandlerMessageQueue.front();
+        mHandlerMessageQueue.pop();
+        LOGE("MESSAGE %d", msg.msgType);
+        switch (msg.msgType) {
+            case MESSAGE_CREATE_CONTEXT:
+                createEglContextHandler();
+                break;
+            case MESSAGE_RENDER:
+                renderTextureHandler(msg.value);
+                break;
+            case MESSAGE_CHANGE_SIZE:
+                changeSizeHanlder();
+                break;
+            case MESSAGE_QUIT:
+                releaseRenderHanlder();
+                isQuited = false;
+                break;
+            default:
+                break;
         }
         pthread_mutex_unlock(&mRenderHandlerMutex);
     }
-}
-
-Message VideoOutput::dequeueMessageHandler() {
-    int lockCode = pthread_mutex_lock(&mRenderHandlerMutex);
-    if (lockCode != 0) {
-        LOGE("postMessage lock 失败");
-        return MESSAGE_NONE;
-    }
-    Message msg;
-    if (mHandlerMessageQueue.empty()) {
-        msg = MESSAGE_NONE;
-    } else {
-        msg = mHandlerMessageQueue.front();
-        mHandlerMessageQueue.pop();
-    }
-    pthread_mutex_unlock(&mRenderHandlerMutex);
-    return msg;
+    LOGE("processMessages 结束");
 }
 
 void VideoOutput::createEglContextHandler() {
     mEglCore.createGL();
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface);
-    mGlRender.prepare(screenWidth, screenHeight);
+    mGlRender.onCreated();
 
 }
 
 void VideoOutput::releaseRenderHanlder() {
+    mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
     mEglCore.destroyGL();
     ANativeWindow_release(mNativeWindow);
 }
 
-void VideoOutput::renderTextureHandler() {
-    int textureId = 0;
+void VideoOutput::renderTextureHandler(int textureId) {
+    mEglCore.makeCurrent(mSurface);
+    LOGE("渲染 %d", textureId);
+    //int textureId = 0;
     //mGlRender.draw(textureId);
+    mEglCore.swapBuffers(mSurface);
 }
 
 void VideoOutput::changeSizeHanlder() {
-    mGlRender.changeSize(screenWidth, screenHeight);
+    mGlRender.onChangeSize(screenWidth, screenHeight);
+}
+
+EGLContext VideoOutput::getShareContext() {
+    return mEglCore.getShareContext();
 }

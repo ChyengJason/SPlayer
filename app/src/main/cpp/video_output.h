@@ -13,34 +13,41 @@
 
 class IVideoOutput {
 public:
-    virtual void output(const VideoFrame& videoFrame) = 0;
+    virtual void output(VideoFrame& videoFrame) = 0;
 };
 
-enum Message {
+enum MsgType {
     MESSAGE_CREATE_CONTEXT,
     MESSAGE_QUIT,
-    MESSAGE_NONE,
     MESSAGE_RENDER,
     MESSAGE_CHANGE_SIZE
+};
+
+struct Message {
+    Message(MsgType type) : msgType(type), value(0) {}
+    Message(MsgType type, int val) : msgType(type), value(val) {}
+    MsgType msgType;
+    int value;
 };
 
 class VideoOutput : public virtual IVideoOutput {
 public:
     VideoOutput();
     ~VideoOutput();
-    void onCreated(ANativeWindow *nativeWindow, int screenWidth, int screenHeight);
+    void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    virtual void output(const VideoFrame& videoFrame);
+    virtual void output(VideoFrame& videoFrame);
     bool postMessage(Message msg);
+    EGLContext getShareContext();
 
 private:
     void createEglContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
-    void renderTextureHandler();
+    void renderTextureHandler(int textureId);
+    void changeSizeHanlder();
     void processMessages();
-    Message dequeueMessageHandler();
     static void* renderHandlerThread(void* self);
 
 private:
@@ -54,8 +61,6 @@ private:
     pthread_mutex_t mRenderHandlerMutex;
     pthread_cond_t mRenderHandlerCond;
     std::queue<Message> mHandlerMessageQueue;
-
-    void changeSizeHanlder();
 };
 
 

@@ -6,11 +6,29 @@
 #define SPLAYER_VIDEOPLAYERCONTROLLER_H
 
 
-class VideoPlayerController {
+#include <android/native_window.h>
+#include "media_synchronizer.h"
+#include "audio_output.h"
+
+class MediaPlayerController {
 public:
-    VideoPlayerController();
-    ~VideoPlayerController();
+    MediaPlayerController();
+    ~MediaPlayerController();
     void start(const char *path);
+    void stop();
+    void pause();
+    void seek(double position);
+    void resume();
+    long getDuration();
+    long getProgress();
+    void onSurfaceCreated(ANativeWindow* window);
+    void onSurfaceSizeChanged(int width, int height);
+    void onSurfaceDestroy();
+
+private:
+    MediaSynchronizer *mSynchronizer;
+    VideoOutput *mVideoOutput;
+    AudioOutput *mAudioOutput;
 };
 
 
