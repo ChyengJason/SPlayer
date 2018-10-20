@@ -21,15 +21,12 @@ public:
     bool play();
     bool setVolume(int level);
     int getBufferSize();
-
-protected:
     virtual int getPcmDataCallback(char**buffer, int maxSize) = 0;
 
 private:
     bool createEngine(); // 创建引擎
     bool createMixVolume(); // 创建混音器
     bool createPlayer(size_t samplerate, size_t channelCount); // 创建播放器
-    void playerCallback();
     static void PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterface, void *context);
 
 private:

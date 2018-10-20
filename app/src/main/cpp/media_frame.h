@@ -30,7 +30,7 @@ public:
        if (data) delete(data);
     }
     int samplerate;
-    int channelCount;
+    int channels;
     double pts;
     char *data;
     int size;

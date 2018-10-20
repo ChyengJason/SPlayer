@@ -19,12 +19,11 @@ bool MediaDecoder::prepare(const char* path) {
     mAudioCodec = NULL;
     mVideoFrame = NULL;
     mYuvFrame = NULL;
-    mAudioFrame = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
     mSwrContext = NULL;
     mAudioOutBuffer = NULL;
-    mSwrBufferSize = 0;
+    mAudioOutBufferSize = 0;
     return init(path);
 }
 
@@ -41,9 +40,14 @@ bool MediaDecoder::init(const char* path) {
         release();
         return false;
     }
+    initPacket();
     initVideoFrameAndSwsContext();
     initAudioFrameAndSwrContext();
-    initTempPacket();
+
+    psl = new MOpenSL;
+    psl->create(mAudioCodecContext->sample_rate, mAudioCodecContext->channels);
+    psl->set(this);
+    psl->play();
     return true;
 }
 
@@ -55,7 +59,7 @@ bool MediaDecoder::getMediaInfo(const char* path) {
     int error;
     char buffer[] = "";
     // 注册网络协议
-    avformat_network_init();
+    //avformat_network_init();
     av_register_all();
     // 获取上下文
     mformatContext = avformat_alloc_context();
@@ -90,6 +94,7 @@ bool MediaDecoder::getMediaInfo(const char* path) {
         LOGE("获取视频流id: %d 或音频流id失败: %d", mVideoStreamIndex, mAudioStreamIndex);
         return false;
     }
+
     return true;
 }
 
@@ -148,18 +153,25 @@ bool MediaDecoder::initVideoFrameAndSwsContext() {
 bool MediaDecoder::initAudioFrameAndSwrContext() {
     int error;
     char buffer[] = "";
-    mAudioFrame = av_frame_alloc();
     mSwrContext = swr_alloc();
+    mAudioFrame = av_frame_alloc();
+     // 输出的采样率必须与输入相同
+    mOutChannelLayout = AV_CH_LAYOUT_STEREO;
 
-    int64_t outChannelLayout = av_get_default_channel_layout(mAudioCodecContext->channels);
-    AVSampleFormat outSampleFormat = AV_SAMPLE_FMT_S16;
-    int outSampleRate = mAudioCodecContext->sample_rate;  // 输出的采样率必须与输入相同
-    int outNumChannels = mAudioCodecContext->channels;
-    mSwrBufferSize = av_samples_get_buffer_size(NULL, outNumChannels, outSampleRate, outSampleFormat, 1);
-    mAudioOutBuffer = (uint8_t*) av_malloc(mSwrBufferSize);
-    swr_alloc_set_opts(mSwrContext, outChannelLayout, outSampleFormat, outSampleRate,
-                       mAudioCodecContext->channel_layout, mAudioCodecContext->sample_fmt, mAudioCodecContext->sample_rate,
-                       0, NULL);
+    mOutFormat = AV_SAMPLE_FMT_S16;
+    mOutSampleRate = mAudioCodecContext->sample_rate;
+    mOutChannels = av_get_channel_layout_nb_channels(mOutChannelLayout);
+    mAudioOutBufferSize = av_samples_get_buffer_size(NULL, mOutChannels, mOutSampleRate, mOutFormat, 1);
+    mAudioOutBuffer = (uint8_t*) av_malloc(mAudioOutBufferSize);
+
+    LOGE("outChannelLayout: %ld", mOutChannelLayout);
+    LOGE("samperate: %d", mOutSampleRate);
+    LOGE("channel: %d", mOutChannels);
+    LOGE("bufferSize: %d" , mAudioOutBufferSize);
+
+    swr_alloc_set_opts(mSwrContext, mOutChannelLayout, mOutFormat, mOutSampleRate,
+                                     mAudioCodecContext->channel_layout, mAudioCodecContext->sample_fmt, mAudioCodecContext->sample_rate,
+                                     0, NULL);
     error = swr_init(mSwrContext);
     if (error < 0) {
         av_strerror(error, buffer, 1024);
@@ -169,15 +181,16 @@ bool MediaDecoder::initAudioFrameAndSwrContext() {
     return true;
 }
 
+void MediaDecoder::initPacket() {
+    packet = (AVPacket *)av_malloc(sizeof(AVPacket));
+    av_init_packet(packet);
+}
+
 AVPacket* MediaDecoder::readFrame() {
-    AVPacket* packet = (AVPacket *)av_malloc(sizeof(AVPacket));
     if (av_read_frame(mformatContext, packet) >= 0) {
         return packet;
-    } else {
-        av_free_packet(packet);
-        av_free(packet);
-        return NULL;
     }
+    return NULL;
 }
 
 VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
@@ -190,7 +203,7 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
         return videoFrame;
     }
     // 解码图像数据：RGBA格式保存在data[0] ，YUV格式有data[0] data[1] data[2]
-    error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, mTempPacket);
+    error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, packet);
     // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
     if ((pts = av_frame_get_best_effort_timestamp(mVideoFrame)) == AV_NOPTS_VALUE) {
         pts = 0;
@@ -209,14 +222,14 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     } else {
         videoFrame = createVideoFrame(pts, mVideoFrame);
     }
-    av_free_packet(packet);
-    av_free(packet);
     return videoFrame;
 }
 
 std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
-    int error;
+    int error = 0;
     char buffer[] = "";
+    AVFrame* frame = av_frame_alloc();
+
     std::vector<AudioFrame*> audioFrames;
 
     if (packet == NULL || packet->stream_index != mAudioStreamIndex) {
@@ -226,34 +239,32 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
     int packetSize = packet->size;
     while (packetSize > 0) {
         int gotframe = 0;
-        int len = avcodec_decode_audio4(mAudioCodecContext, mAudioFrame, &gotframe, packet);
+        int len = avcodec_decode_audio4(mAudioCodecContext, frame, &gotframe, packet);
         if (len < 0) {
             break;
         }
         if (gotframe) {
-            int swrlen = swr_convert(mSwrContext, &mAudioOutBuffer, mAudioFrame->nb_samples * 2, (const uint8_t **) mAudioFrame->data, mAudioFrame->nb_samples);
+            int swrlen = swr_convert(mSwrContext, &mAudioOutBuffer, mAudioOutBufferSize, (const uint8_t **) frame->data, frame->nb_samples);
             if (swrlen  < 0) {
                 av_strerror(error, buffer, 1024);
                 LOGE("decodeAudioFrame失败: %d(%s)", error, buffer);
                 return audioFrames;
             }
-            if (swrlen == mSwrBufferSize) {
+            if (swrlen == mAudioOutBufferSize) {
                 LOGE("audio buffer is probably too small");
             }
-            int size = swrlen * mAudioCodecContext->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+            int size = swrlen * mAudioCodecContext->channels  * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);//每声道采样数 x 声道数 x 每个采样字节数
             // 一个 packet 中可以包含多个帧，packet 中的 PTS 比真正的播放的 PTS 可能会早很多,播放的时候需要重新纠正
             double pts = av_q2d(mformatContext->streams[mAudioStreamIndex]->time_base) * packet->pts;
-            AudioFrame* audioFrame = createAudioFrame(pts, mAudioCodecContext->sample_rate, mAudioCodecContext->channels, size, mAudioFrame->data[0]);
-            LOGD("音频解码 pts: %f, size: %d", pts, audioFrame->size);
-            audioFrames.push_back(audioFrame);
+            LOGD("创建音频帧size: %d",size);
+            AudioFrame* audioFrame = createAudioFrame(pts, size, mAudioOutBuffer);
+            if(audioFrame) audioFrames.push_back(audioFrame);
         }
         if (0 == len) {
             break;
         }
         packetSize -= len;
     }
-    av_free_packet(packet);
-    av_free(packet);
     return audioFrames;
 }
 
@@ -264,18 +275,18 @@ int64_t MediaDecoder::getMediaDuration() {
     return 0;
 }
 
-AudioFrame *MediaDecoder::createAudioFrame(double pts, int samplerate, int channelCount, int size, uint8_t* data) {
-    if (size > 0 ){
-        AudioFrame* audioFrame = new AudioFrame;
-        audioFrame->pts = pts;
-        audioFrame->samplerate = samplerate;
-        audioFrame->channelCount = channelCount;
-        audioFrame->size = size;
-        audioFrame->data = new char[size];
-        memcpy(audioFrame->data, data, size);
-        return audioFrame;
+AudioFrame *MediaDecoder::createAudioFrame(double pts, int size, uint8_t* data) {
+    if (size <= 0 || data == NULL) {
+        return NULL;
     }
-    return NULL;
+    AudioFrame* audioFrame = new AudioFrame;
+    audioFrame->size = size;
+    audioFrame->pts = pts;
+    audioFrame->samplerate = mOutSampleRate;
+    audioFrame->channels = mOutChannels;
+    audioFrame->data = new char[size];
+    memcpy(audioFrame->data, (char*)data, size);
+    return audioFrame;
 }
 
 VideoFrame *MediaDecoder::createVideoFrame(double pts, AVFrame *videoFrame) {
@@ -316,6 +327,10 @@ void MediaDecoder::copyFrameData(uint8_t * dst, uint8_t * src, int width, int he
 }
 
 void MediaDecoder::release() {
+    if (packet) {
+        av_free_packet(packet);
+        packet = NULL;
+    }
     if (mYuvFrame) {
         av_frame_free(&mYuvFrame);
         mYuvFrame = NULL;
@@ -359,17 +374,30 @@ void MediaDecoder::release() {
 }
 
 int MediaDecoder::getSamplerate() {
-    return mAudioCodecContext ? mAudioCodecContext->sample_rate : 0;
+    return mOutSampleRate;
 }
 
 int MediaDecoder::getChannelCount() {
-    return mAudioCodecContext ? mAudioCodecContext->channels: 0;
+    return mOutChannels;
 }
 
-bool MediaDecoder::isVideoPacket(const AVPacket &packet) {
-    return packet.stream_index == mVideoStreamIndex;
+bool MediaDecoder::isVideoPacket(AVPacket * const packet) {
+    return packet->stream_index == mVideoStreamIndex;
 }
 
-bool MediaDecoder::isAudioPacket(const AVPacket &packet) {
-    return packet.stream_index == mAudioStreamIndex;
+bool MediaDecoder::isAudioPacket(AVPacket * const packet) {
+    return packet->stream_index == mAudioStreamIndex;
+}
+
+void MediaDecoder::getPcmData(void **pcm, size_t *pcm_size) {
+    while (packet = readFrame()) {
+        if (packet->stream_index == mAudioStreamIndex) {
+            std::vector<AudioFrame*> frames = decodeAudioFrame(packet);
+            if (!frames.empty()) {
+                *pcm = frames[0]->data;
+                *pcm_size = frames[0]->size;
+            }
+            break;
+        }
+    }
 }

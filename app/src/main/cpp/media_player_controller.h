@@ -31,10 +31,12 @@ private:
     static VideoFrame* getVideoFrame();
     static AudioFrame* getAudioFrame();
 
+//private:
+//    MediaSynchronizer *mSynchronizer;
+//    VideoOutput *mVideoOutput;
+//    AudioOutput *mAudioOutput;
 private:
-    MediaSynchronizer *mSynchronizer;
-    VideoOutput *mVideoOutput;
-    AudioOutput *mAudioOutput;
+    MediaDecoder decoder;
 };
 
 

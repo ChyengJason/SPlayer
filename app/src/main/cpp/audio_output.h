@@ -21,7 +21,7 @@ public:
     void stop();
 
 protected:
-    virtual int getPcmDataCallback(char**buffer, int maxSize);
+    virtual int getPcmDataCallback(char**buffer, int maxSize)  ;
 
 private:
     double curPresentTime;

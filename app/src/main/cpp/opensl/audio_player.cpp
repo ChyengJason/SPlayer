@@ -2,6 +2,7 @@
 // Created by chengjunsen on 2018/10/19.
 //
 
+#include <unistd.h>
 #include "audio_player.h"
 #include "audio_player_util.h"
 #include "../android_log.h"
@@ -71,14 +72,15 @@ bool AudioPlayer::createPlayer(size_t samplerate, size_t channelCount) {
     result = (*mEngineEngine)->CreateAudioPlayer(mEngineEngine, &mAudioPlayerObjet, &slDataSource, &slDataSink, 3, ids, req);
     // 初始化播放器
     result = (*mAudioPlayerObjet)->Realize(mAudioPlayerObjet, SL_BOOLEAN_FALSE);
-    // 获取 Player 接口
-    result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_PLAY, &mPlayer);
+
     // 获取音量接口
     result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_VOLUME, &mVolume);
     // 注册缓冲区
     result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_BUFFERQUEUE, &mBufferQueueInterface);
     // 设置回调接口
-    result = (*mBufferQueueInterface)->RegisterCallback(mBufferQueueInterface, PlayerCallback, NULL);
+    result = (*mBufferQueueInterface)->RegisterCallback(mBufferQueueInterface, PlayerCallback, this);
+    // 获取 Player 接口
+    result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_PLAY, &mPlayer);
 
     return result == SL_RESULT_SUCCESS;
 }
@@ -108,35 +110,26 @@ void AudioPlayer::release() {
 }
 
 void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterface, void *context) {
-    LOGE("PlayerCallback ");
     AudioPlayer* player = (AudioPlayer*) context;
-    player->playerCallback();
-}
-
-void AudioPlayer::playerCallback() {
-    LOGE("playerCallback 000");
-    int size = getPcmDataCallback(&mBuffer, mBufferSize);
-    LOGE("mBufferSize %d", mBufferSize);
-    LOGE("mBuffer == NULL, %d", mBuffer == NULL);
-    LOGE("playerCallback size: %d", size);
+    int size = player->getPcmDataCallback(&(player->mBuffer), player->mBufferSize);
+    LOGE("PlayerCallback size: %d, buffersize: %d", size, player->mBufferSize);
     if(size > 0){
         // 将得到的数据加入到队列中
-        SLresult result = (*mBufferQueueInterface)->Enqueue(mBufferQueueInterface, mBuffer, mBufferSize);
+        SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, player->mBuffer, size);
         LOGE("Enqueue %s", AudioPlayerUtil::ResultToString(result));
     }
 }
 
 bool AudioPlayer::pause() {
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PAUSED);
-    return result;
+    return result == SL_RESULT_SUCCESS;
 }
 
 bool AudioPlayer::play() {
-    LOGE("AudioPlayer play");
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PLAYING);
-    LOGE("AudioPlayer SetPlayState %d", result == SL_RESULT_SUCCESS);
-    playerCallback();
-    return true;
+    LOGE("play() SetPlayState %d", result == SL_RESULT_SUCCESS);
+    PlayerCallback(mBufferQueueInterface, this);
+    return result == SL_RESULT_SUCCESS;
 }
 
 /**
