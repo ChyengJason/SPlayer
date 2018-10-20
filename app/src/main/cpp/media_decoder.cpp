@@ -44,10 +44,6 @@ bool MediaDecoder::init(const char* path) {
     initVideoFrameAndSwsContext();
     initAudioFrameAndSwrContext();
 
-    psl = new MOpenSL;
-    psl->create(mAudioCodecContext->sample_rate, mAudioCodecContext->channels);
-    psl->set(this);
-    psl->play();
     return true;
 }
 
@@ -187,6 +183,9 @@ void MediaDecoder::initPacket() {
 }
 
 AVPacket* MediaDecoder::readFrame() {
+    if (mformatContext == NULL) {
+        return NULL;
+    }
     if (av_read_frame(mformatContext, packet) >= 0) {
         return packet;
     }
@@ -228,10 +227,7 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
 std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
     int error = 0;
     char buffer[] = "";
-    AVFrame* frame = av_frame_alloc();
-
     std::vector<AudioFrame*> audioFrames;
-
     if (packet == NULL || packet->stream_index != mAudioStreamIndex) {
         return audioFrames;
     }
@@ -239,12 +235,12 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
     int packetSize = packet->size;
     while (packetSize > 0) {
         int gotframe = 0;
-        int len = avcodec_decode_audio4(mAudioCodecContext, frame, &gotframe, packet);
+        int len = avcodec_decode_audio4(mAudioCodecContext, mAudioFrame, &gotframe, packet);
         if (len < 0) {
             break;
         }
         if (gotframe) {
-            int swrlen = swr_convert(mSwrContext, &mAudioOutBuffer, mAudioOutBufferSize, (const uint8_t **) frame->data, frame->nb_samples);
+            int swrlen = swr_convert(mSwrContext, &mAudioOutBuffer, mAudioOutBufferSize, (const uint8_t **) mAudioFrame->data, mAudioFrame->nb_samples);
             if (swrlen  < 0) {
                 av_strerror(error, buffer, 1024);
                 LOGE("decodeAudioFrame失败: %d(%s)", error, buffer);
@@ -259,6 +255,7 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
             LOGD("创建音频帧size: %d",size);
             AudioFrame* audioFrame = createAudioFrame(pts, size, mAudioOutBuffer);
             if(audioFrame) audioFrames.push_back(audioFrame);
+            av_free_packet(packet);
         }
         if (0 == len) {
             break;
@@ -286,6 +283,7 @@ AudioFrame *MediaDecoder::createAudioFrame(double pts, int size, uint8_t* data) 
     audioFrame->channels = mOutChannels;
     audioFrame->data = new char[size];
     memcpy(audioFrame->data, (char*)data, size);
+    LOGE("createAudioFrame");
     return audioFrame;
 }
 
@@ -329,6 +327,7 @@ void MediaDecoder::copyFrameData(uint8_t * dst, uint8_t * src, int width, int he
 void MediaDecoder::release() {
     if (packet) {
         av_free_packet(packet);
+        av_free(packet);
         packet = NULL;
     }
     if (mYuvFrame) {
@@ -387,17 +386,4 @@ bool MediaDecoder::isVideoPacket(AVPacket * const packet) {
 
 bool MediaDecoder::isAudioPacket(AVPacket * const packet) {
     return packet->stream_index == mAudioStreamIndex;
-}
-
-void MediaDecoder::getPcmData(void **pcm, size_t *pcm_size) {
-    while (packet = readFrame()) {
-        if (packet->stream_index == mAudioStreamIndex) {
-            std::vector<AudioFrame*> frames = decodeAudioFrame(packet);
-            if (!frames.empty()) {
-                *pcm = frames[0]->data;
-                *pcm_size = frames[0]->size;
-            }
-            break;
-        }
-    }
 }

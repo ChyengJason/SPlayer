@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 #include "media_frame.h"
-#include "opensl/audio_player.h"
-
 extern "C" {
 #include "libavcodec/avcodec.h" // 编码
 #include "libavformat/avformat.h" // 封装格式
@@ -15,9 +13,6 @@ extern "C" {
 #include "libswresample/swresample.h" //音频采样
 #include "android_log.h"
 };
-
-class MOpenSL;
-
 /**
  * 负责解码音视频
  */
@@ -46,8 +41,6 @@ public:
     bool isVideoPacket(AVPacket* const packet);
 
     bool isAudioPacket(AVPacket* const packet);
-
-    void getPcmData(void **pcm, size_t *pcm_size);
 
 private:
     bool init(const char* path);
@@ -96,25 +89,6 @@ private:
     AVFrame *mYuvFrame;
     AVFrame *mAudioFrame;
     AVPacket*packet;
-    MOpenSL *psl;
 };
-
-
-class MOpenSL : public AudioPlayer {
-public:
-    virtual int getPcmDataCallback(char**buffer, int maxSize) {
-        size_t size;
-        mDecoder->getPcmData((void **)buffer, &size);
-        return size;
-    }
-
-    void set(MediaDecoder *pDecoder) {
-        mDecoder = pDecoder;
-    }
-
-private:
-    MediaDecoder *mDecoder;
-};
-
 
 #endif //SPLAYER_VIDEO_DECODER_H

@@ -21,7 +21,7 @@ public:
     void stop();
 
 protected:
-    virtual int getPcmDataCallback(char**buffer, int maxSize)  ;
+    virtual bool getAudioFrameCallback(AudioFrame** );
 
 private:
     double curPresentTime;

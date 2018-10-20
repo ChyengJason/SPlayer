@@ -16,9 +16,6 @@ AudioPlayer::~AudioPlayer() {
 }
 
 void AudioPlayer::create(size_t samplerate, size_t channelCount) {
-    mBufferSize = samplerate * channelCount * 2;// 16bit
-    mBuffer = new char[mBufferSize];
-
     LOGE("创建引擎：%d", createEngine());
     LOGE("创建混音：%d", createMixVolume());
     LOGE("创建播放器: %d", createPlayer(samplerate, channelCount));
@@ -102,21 +99,17 @@ void AudioPlayer::release() {
         mEngineObject = NULL;
         mEngineEngine = NULL;
     }
-    if (mBuffer != NULL) {
-        delete[] mBuffer;
-        mBuffer = NULL;
-        mBufferSize = 0;
-    }
 }
 
 void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterface, void *context) {
     AudioPlayer* player = (AudioPlayer*) context;
-    int size = player->getPcmDataCallback(&(player->mBuffer), player->mBufferSize);
-    LOGE("PlayerCallback size: %d, buffersize: %d", size, player->mBufferSize);
-    if(size > 0){
-        // 将得到的数据加入到队列中
-        SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, player->mBuffer, size);
-        LOGE("Enqueue %s", AudioPlayerUtil::ResultToString(result));
+    AudioFrame* audioFrame;
+    bool isExist = player->getAudioFrameCallback(&audioFrame);
+    LOGE("PlayerCallback");
+    if (isExist && audioFrame != NULL) {
+        SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, audioFrame->data, audioFrame->size);
+        LOGE("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(audioFrame), strlen(audioFrame->data));
+        //delete audioFrame;
     }
 }
 
@@ -140,8 +133,4 @@ bool AudioPlayer::play() {
 bool AudioPlayer::setVolume(int level) {
     SLresult result = (*mVolume)->SetVolumeLevel(mVolume, (SLmillibel) ((1.0f - level/ 100.0f) * -5000));
     return result;
-}
-
-int AudioPlayer::getBufferSize() {
-    return mBufferSize;
 }

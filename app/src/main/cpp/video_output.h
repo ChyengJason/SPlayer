@@ -13,6 +13,8 @@
 
 enum MsgType {
     MESSAGE_CREATE_CONTEXT,
+    MESSAGE_CREATE_SURFACE,
+    MESSAGE_UPDATE_SURFACE,
     MESSAGE_QUIT,
     MESSAGE_RENDER,
     MESSAGE_CHANGE_SIZE
@@ -29,12 +31,15 @@ class VideoOutput{
 public:
     VideoOutput();
     ~VideoOutput();
+    void start();
     void onCreated(ANativeWindow *nativeWindow);
+    void onUpdated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
     void output(VideoFrame& videoFrame);
     bool postMessage(Message msg);
     EGLContext getShareContext();
+    bool isSurfaceValid();
 
 private:
     void createEglContextHandler();
@@ -43,6 +48,8 @@ private:
     void renderTextureHandler(int textureId);
     void changeSizeHanlder();
     void processMessages();
+    void createSurfaceHandler();
+    void updateSurfaceHandler();
     static void* renderHandlerThread(void* self);
 
 private:
@@ -56,6 +63,7 @@ private:
     pthread_mutex_t mRenderHandlerMutex;
     pthread_cond_t mRenderHandlerCond;
     std::queue<Message> mHandlerMessageQueue;
+    bool isInited;
 };
 
 

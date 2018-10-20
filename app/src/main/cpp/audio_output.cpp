@@ -30,17 +30,10 @@ bool AudioOutput::resume() {
     return AudioPlayer::play();
 }
 
-int AudioOutput::getPcmDataCallback(char **buffer, int maxSize) {
+bool AudioOutput::getAudioFrameCallback(AudioFrame **copyFrame) {
     AudioFrame* audioFrame = mGetAudioCallback();
-    LOGE("audio output getPcmDataCallback actualSize: %d maxsize: %d", audioFrame->size, maxSize);
-    int actualSize = 0;
-    if (audioFrame != NULL && audioFrame->size > 0) {
-        curPresentTime = audioFrame->pts;
-        actualSize = audioFrame->size;
-        *buffer = audioFrame->data;
-        //memcpy(buffer, audioFrame->data, std::min(audioFrame->size, maxSize));
-    }
-    LOGE("audio output getPcmDataCallback2: %d", actualSize);
-    //delete(audioFrame);
-    return actualSize;
+    if (audioFrame == NULL || audioFrame->size <= 0)
+        return false;
+    *copyFrame = audioFrame;
+    return true;
 }

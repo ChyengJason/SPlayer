@@ -48,5 +48,4 @@ private:
     std::queue<AudioFrame*> mAudioFrameQue;
 };
 
-
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

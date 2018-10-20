@@ -11,6 +11,8 @@ extern "C" {
 
 VideoOutput::VideoOutput() {
     mNativeWindow = NULL;
+    mSurface = EGL_NO_SURFACE;
+    isInited = false;
 }
 
 VideoOutput::~VideoOutput() {
@@ -18,11 +20,25 @@ VideoOutput::~VideoOutput() {
     pthread_mutex_destroy(&mRenderHandlerMutex);
 }
 
-void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
-    mNativeWindow = nativeWindow;
+void VideoOutput::start() {
     LOGE("当前主线程：%lu", (unsigned long)pthread_self());
     createRenderHandlerThread();
+    isInited = true;
     postMessage(MESSAGE_CREATE_CONTEXT);
+}
+
+void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
+    if (!isInited) {
+        start();
+    }
+    mNativeWindow = nativeWindow;
+    mSurface = EGL_NO_SURFACE;
+    postMessage(MESSAGE_CREATE_SURFACE);
+}
+
+void VideoOutput::onUpdated(ANativeWindow *nativeWindow) {
+    mNativeWindow = nativeWindow;
+    postMessage(MESSAGE_UPDATE_SURFACE);
 }
 
 void VideoOutput::onChangeSize(int width, int height) {
@@ -89,6 +105,12 @@ void VideoOutput::processMessages() {
             case MESSAGE_CREATE_CONTEXT:
                 createEglContextHandler();
                 break;
+            case MESSAGE_CREATE_SURFACE:
+                createSurfaceHandler();
+                break;
+            case MESSAGE_UPDATE_SURFACE:
+                updateSurfaceHandler();
+                break;
             case MESSAGE_RENDER:
                 renderTextureHandler(msg.value);
                 break;
@@ -109,15 +131,28 @@ void VideoOutput::processMessages() {
 
 void VideoOutput::createEglContextHandler() {
     mEglCore.createGL();
+
+}
+
+void VideoOutput::createSurfaceHandler() {
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface);
     mGlRender.onCreated();
+}
 
+void VideoOutput::updateSurfaceHandler() {
+    mGlRender.onDestroy();
+    mEglCore.destroySurface(mSurface);
+    mSurface = EGL_NO_SURFACE;
+    mSurface = mEglCore.createWindowSurface(mNativeWindow);
+    mEglCore.makeCurrent(mSurface);
+    mGlRender.onCreated();
 }
 
 void VideoOutput::releaseRenderHanlder() {
     mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
+    mSurface = EGL_NO_SURFACE;
     mEglCore.destroyGL();
     ANativeWindow_release(mNativeWindow);
 }
@@ -136,4 +171,8 @@ void VideoOutput::changeSizeHanlder() {
 
 EGLContext VideoOutput::getShareContext() {
     return mEglCore.getShareContext();
+}
+
+bool VideoOutput::isSurfaceValid() {
+    return mSurface != EGL_NO_SURFACE;
 }

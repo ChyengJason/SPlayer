@@ -34,7 +34,6 @@ set_target_properties(swscale-3 PROPERTIES IMPORTED_LOCATION
 
 add_library(video-player-lib SHARED
             src/main/cpp/media_decoder.cpp
-            src/main/cpp/audio_decoder.cpp
             src/main/cpp/media_player_controller.cpp
             src/main/cpp/media_synchronizer.cpp
             src/main/cpp/video_output.cpp

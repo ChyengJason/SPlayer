@@ -10,17 +10,25 @@
 #include "media_synchronizer.h"
 #include "audio_output.h"
 
+enum MediaStatus {
+    UNINITED,
+    STOP,
+    PLAY,
+    PAUSE,
+    SUSPEND
+};
+
 class MediaPlayerController {
 public:
     MediaPlayerController();
     ~MediaPlayerController();
-    const MediaPlayerController& getMediaPlayerController();
     void start(const char *path);
     void stop();
     void pause();
     void seek(double position);
     void resume();
     void release();
+    void suspend();
     long getDuration();
     long getProgress();
     void onSurfaceCreated(ANativeWindow* window);
@@ -31,12 +39,11 @@ private:
     static VideoFrame* getVideoFrame();
     static AudioFrame* getAudioFrame();
 
-//private:
-//    MediaSynchronizer *mSynchronizer;
-//    VideoOutput *mVideoOutput;
-//    AudioOutput *mAudioOutput;
 private:
-    MediaDecoder decoder;
+    MediaSynchronizer *mSynchronizer;
+    VideoOutput *mVideoOutput;
+    AudioOutput *mAudioOutput;
+    MediaStatus mStatus;
 };
 
 

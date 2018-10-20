@@ -6,6 +6,8 @@
 #define SPLAYER_AUDIO_PLAYER_H
 
 #include <string>
+#include "../media_frame.h"
+
 extern "C" {
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -21,7 +23,9 @@ public:
     bool play();
     bool setVolume(int level);
     int getBufferSize();
-    virtual int getPcmDataCallback(char**buffer, int maxSize) = 0;
+
+protected:
+    virtual bool getAudioFrameCallback(AudioFrame** ) = 0;
 
 private:
     bool createEngine(); // 创建引擎
@@ -38,8 +42,6 @@ private:
     SLPlayItf mPlayer; // 播放器接口
     SLVolumeItf mVolume; // 音量
     SLAndroidSimpleBufferQueueItf  mBufferQueueInterface;// 缓冲区队列接口
-    char * mBuffer;
-    int mBufferSize;
 };
 
 #endif //SPLAYER_AUDIO_PLAYER_H

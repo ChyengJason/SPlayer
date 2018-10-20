@@ -1,6 +1,7 @@
 //
 // Created by chengjunsen on 2018/10/12.
 //
+#include <unistd.h>
 #include "media_synchronizer.h"
 
 MediaSynchronizer::MediaSynchronizer() {
@@ -26,6 +27,9 @@ void MediaSynchronizer::start() {
 
 void MediaSynchronizer::finish() {
     mMediaDecoder->finish();
+    clearAudioFrameQue();
+    clearVideoFrameQue();
+    // 停止线程
 }
 
 void MediaSynchronizer::startDecodeThread() {
@@ -45,7 +49,7 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
     MediaDecoder* videoDecoder = synchronizer->mMediaDecoder;
     int count = 0;
     AVPacket* packet;
-    while ((packet = videoDecoder->readFrame()) != NULL && count < 100) {
+    while ((packet = videoDecoder->readFrame()) != NULL) {
 //        if (videoDecoder->isVideoPacket(packet)) {
 //            LOGD("解码视频帧 %d", ++count);
 //            VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
@@ -78,7 +82,6 @@ void MediaSynchronizer::clearAudioFrameQue() {
 }
 
 void MediaSynchronizer::pushAudioFrameQue(std::vector<AudioFrame*> vec) {
-    LOGD("pushAudioFrameQue %d", vec.size());
     pthread_mutex_lock(&mAudioQueMutex);
     std::vector<AudioFrame*>::iterator begin = vec.begin();
     for (; begin != vec.end() ; ++begin) {
@@ -106,15 +109,14 @@ VideoFrame *MediaSynchronizer::getVideoFrame() {
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
-    LOGE("MediaSynchronizer getAudioFrame");
     AudioFrame* frame = NULL;
     pthread_mutex_lock(&mAudioQueMutex);
     if (!mAudioFrameQue.empty()) {
         frame = mAudioFrameQue.front();
         mAudioFrameQue.pop();
     }
+    LOGE("MediaSynchronizer getAudioFrame queue size: %d", mAudioFrameQue.size());
     pthread_mutex_unlock(&mAudioQueMutex);
-    LOGE("MediaSynchronizer outGetAudioFrame");
     return frame;
 }
 
