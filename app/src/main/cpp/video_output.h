@@ -11,11 +11,6 @@
 #include "render/gl_render.h"
 #include <queue>
 
-class IVideoOutput {
-public:
-    virtual void output(VideoFrame& videoFrame) = 0;
-};
-
 enum MsgType {
     MESSAGE_CREATE_CONTEXT,
     MESSAGE_QUIT,
@@ -30,14 +25,14 @@ struct Message {
     int value;
 };
 
-class VideoOutput : public virtual IVideoOutput {
+class VideoOutput{
 public:
     VideoOutput();
     ~VideoOutput();
     void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    virtual void output(VideoFrame& videoFrame);
+    void output(VideoFrame& videoFrame);
     bool postMessage(Message msg);
     EGLContext getShareContext();
 

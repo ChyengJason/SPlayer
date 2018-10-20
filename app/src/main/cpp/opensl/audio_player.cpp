@@ -1,0 +1,154 @@
+//
+// Created by chengjunsen on 2018/10/19.
+//
+
+#include "audio_player.h"
+#include "audio_player_util.h"
+#include "../android_log.h"
+
+AudioPlayer::AudioPlayer() {
+
+}
+
+AudioPlayer::~AudioPlayer() {
+
+}
+
+void AudioPlayer::create(size_t samplerate, size_t channelCount) {
+    mBufferSize = samplerate * channelCount * 2;// 16bit
+    mBuffer = new char[mBufferSize];
+
+    LOGE("创建引擎：%d", createEngine());
+    LOGE("创建混音：%d", createMixVolume());
+    LOGE("创建播放器: %d", createPlayer(samplerate, channelCount));
+}
+
+bool AudioPlayer::createEngine() {
+    SLresult result;
+    result = slCreateEngine(&mEngineObject, 0, NULL, 0, NULL, NULL);// 创建引擎
+    result = (*mEngineObject)->Realize(mEngineObject, SL_BOOLEAN_FALSE);// 实现 mEngineObject 接口对象
+    result = (*mEngineObject)->GetInterface(mEngineObject, SL_IID_ENGINE, &mEngineEngine);// 通过 mEngineObject 的 GetInterface 方法初始化 mEngineEngine
+    return result == SL_RESULT_SUCCESS;
+}
+
+bool AudioPlayer::createMixVolume() {
+    SLresult result;
+    result = (*mEngineEngine)->CreateOutputMix(mEngineEngine, &mOutputMixObject, 0, 0, 0); // 用引擎对象创建混音器对象
+    result = (*mOutputMixObject)->Realize(mOutputMixObject, SL_BOOLEAN_FALSE); // 实现混音器接口对象
+    result = (*mOutputMixObject)->GetInterface(mOutputMixObject, SL_IID_ENVIRONMENTALREVERB, &mOutputMixEnvirRevarb); // 初始化 mOutputMixEnvirRevarb
+    SLEnvironmentalReverbSettings mOutputMixEnvirReverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT;
+    // 设置
+    if (result == SL_RESULT_SUCCESS) {
+        result = (*mOutputMixEnvirRevarb)->SetEnvironmentalReverbProperties(mOutputMixEnvirRevarb, &mOutputMixEnvirReverbSettings);
+    }
+    return result == SL_RESULT_SUCCESS;
+}
+
+bool AudioPlayer::createPlayer(size_t samplerate, size_t channelCount) {
+    // 缓冲区队列
+    SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
+
+    int channelMask = AudioPlayerUtil::getChannel(channelCount);
+    int samplerateMask = AudioPlayerUtil::getSampleRate(samplerate);
+    // pcm 参数配置
+    SLDataFormat_PCM pcm = {
+            SL_DATAFORMAT_PCM, // 播放 pcm 格式的数据
+            channelCount, // 声道数量
+            samplerateMask, // 采样率
+            SL_PCMSAMPLEFORMAT_FIXED_16,// 采样位数 16 位
+            SL_PCMSAMPLEFORMAT_FIXED_16,// 包含位数 跟采样位数一致就行
+            channelMask, // 立体声（前左前右）
+            SL_BYTEORDER_LITTLEENDIAN // 结束标志
+    };
+
+    SLDataSource slDataSource = {&bufferQueue, &pcm};
+    SLDataLocator_OutputMix slDataLocatorOutputMix = {SL_DATALOCATOR_OUTPUTMIX, mOutputMixObject};
+    SLDataSink slDataSink = {&slDataLocatorOutputMix, NULL};
+    const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE, SL_IID_EFFECTSEND, SL_IID_VOLUME};
+    const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+    // 创建播放器
+    SLresult  result;
+    result = (*mEngineEngine)->CreateAudioPlayer(mEngineEngine, &mAudioPlayerObjet, &slDataSource, &slDataSink, 3, ids, req);
+    // 初始化播放器
+    result = (*mAudioPlayerObjet)->Realize(mAudioPlayerObjet, SL_BOOLEAN_FALSE);
+    // 获取 Player 接口
+    result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_PLAY, &mPlayer);
+    // 获取音量接口
+    result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_VOLUME, &mVolume);
+    // 注册缓冲区
+    result = (*mAudioPlayerObjet)->GetInterface(mAudioPlayerObjet, SL_IID_BUFFERQUEUE, &mBufferQueueInterface);
+    // 设置回调接口
+    result = (*mBufferQueueInterface)->RegisterCallback(mBufferQueueInterface, PlayerCallback, NULL);
+
+    return result == SL_RESULT_SUCCESS;
+}
+
+void AudioPlayer::release() {
+    if(mAudioPlayerObjet != NULL){
+        (*mAudioPlayerObjet)->Destroy(mAudioPlayerObjet);
+        mAudioPlayerObjet = NULL;
+        mBufferQueueInterface = NULL;
+        mPlayer = NULL;
+    }
+    if(mOutputMixObject != NULL){
+        (*mOutputMixObject)->Destroy(mOutputMixObject);
+        mOutputMixObject = NULL;
+        mOutputMixEnvirRevarb = NULL;
+    }
+    if(mEngineObject != NULL){
+        (*mEngineObject)->Destroy(mEngineObject);
+        mEngineObject = NULL;
+        mEngineEngine = NULL;
+    }
+    if (mBuffer != NULL) {
+        delete[] mBuffer;
+        mBuffer = NULL;
+        mBufferSize = 0;
+    }
+}
+
+void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterface, void *context) {
+    LOGE("PlayerCallback ");
+    AudioPlayer* player = (AudioPlayer*) context;
+    player->playerCallback();
+}
+
+void AudioPlayer::playerCallback() {
+    LOGE("playerCallback 000");
+    int size = getPcmDataCallback(&mBuffer, mBufferSize);
+    LOGE("mBufferSize %d", mBufferSize);
+    LOGE("mBuffer == NULL, %d", mBuffer == NULL);
+    LOGE("playerCallback size: %d", size);
+    if(size > 0){
+        // 将得到的数据加入到队列中
+        SLresult result = (*mBufferQueueInterface)->Enqueue(mBufferQueueInterface, mBuffer, mBufferSize);
+        LOGE("Enqueue %s", AudioPlayerUtil::ResultToString(result));
+    }
+}
+
+bool AudioPlayer::pause() {
+    SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PAUSED);
+    return result;
+}
+
+bool AudioPlayer::play() {
+    LOGE("AudioPlayer play");
+    SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PLAYING);
+    LOGE("AudioPlayer SetPlayState %d", result == SL_RESULT_SUCCESS);
+    playerCallback();
+    return true;
+}
+
+/**
+ * 设置音量 [0-100]
+ * @param level
+ * @return
+ */
+bool AudioPlayer::setVolume(int level) {
+    SLresult result = (*mVolume)->SetVolumeLevel(mVolume, (SLmillibel) ((1.0f - level/ 100.0f) * -5000));
+    return result;
+}
+
+int AudioPlayer::getBufferSize() {
+    return mBufferSize;
+}

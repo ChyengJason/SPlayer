@@ -14,16 +14,22 @@ class MediaPlayerController {
 public:
     MediaPlayerController();
     ~MediaPlayerController();
+    const MediaPlayerController& getMediaPlayerController();
     void start(const char *path);
     void stop();
     void pause();
     void seek(double position);
     void resume();
+    void release();
     long getDuration();
     long getProgress();
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
+
+private:
+    static VideoFrame* getVideoFrame();
+    static AudioFrame* getAudioFrame();
 
 private:
     MediaSynchronizer *mSynchronizer;

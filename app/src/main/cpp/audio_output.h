@@ -6,12 +6,26 @@
 #define SPLAYER_AUDIO_OUTPUT_H
 
 
-class AudioOutput {
+#include "opensl/audio_player.h"
+#include "media_frame.h"
+
+typedef AudioFrame* (*GetAudioFrameCallback)();
+
+class AudioOutput: public AudioPlayer {
 public:
     AudioOutput();
     ~AudioOutput();
-    bool start(int channel, int samplerate, int foramt);
+    bool start(int channel, int samplerate, GetAudioFrameCallback);
+    bool pause();
+    bool resume();
     void stop();
+
+protected:
+    virtual int getPcmDataCallback(char**buffer, int maxSize);
+
+private:
+    double curPresentTime;
+    GetAudioFrameCallback mGetAudioCallback;
 };
 
 

@@ -26,15 +26,23 @@ public:
 
     bool prepare(const char* path);
 
-    bool readFrame(bool& isVideoFrame);
+    AVPacket* readFrame();
 
-    VideoFrame* decodeVideoFrame();
+    VideoFrame* decodeVideoFrame(AVPacket*);
 
-    std::vector<AudioFrame*> decodeAudioFrame();
+    std::vector<AudioFrame*> decodeAudioFrame(AVPacket*);
 
     void finish();
 
     int64_t getMediaDuration();
+
+    int getSamplerate();
+
+    int getChannelCount();
+
+    bool isVideoPacket(AVPacket* const packet);
+
+    bool isAudioPacket(AVPacket* const packet);
 
 private:
     bool init(const char* path);
@@ -49,13 +57,11 @@ private:
 
     bool initAudioFrameAndSwrContext();
 
-    bool initTempPacket();
-
     void release();
 
     VideoFrame *createVideoFrame(double pts, AVFrame *videoFrame);
 
-    AudioFrame *createAudioFrame(double pts, int samplerate, int channelCount, uint8_t* data);
+    AudioFrame *createAudioFrame(double pts, int samplerate, int channelCount, int size, uint8_t* data);
 
     void copyFrameData(uint8_t *dst, uint8_t *src, int width, int height, int linesize);
 
@@ -76,7 +82,6 @@ private:
     AVFrame *mVideoFrame;
     AVFrame *mAudioFrame;
     AVFrame *mYuvFrame;
-    AVPacket *mTempPacket;
 };
 
 #endif //SPLAYER_VIDEO_DECODER_H

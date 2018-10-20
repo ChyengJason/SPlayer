@@ -11,7 +11,6 @@ class VideoFrame {
 public:
     VideoFrame():luma(NULL), chromaB(NULL), chromaR(NULL) {}
     ~VideoFrame() {
-        LOGE("delete luma");
         if (luma) delete(luma);
         if (chromaB) delete(chromaB);
         if (chromaR) delete(chromaR);
@@ -28,7 +27,7 @@ class AudioFrame {
 public:
     AudioFrame() : data(NULL) {}
     ~AudioFrame() {
-        delete(data);
+       if (data) delete(data);
     }
     int samplerate;
     int channelCount;

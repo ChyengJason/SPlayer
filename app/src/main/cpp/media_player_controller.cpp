@@ -4,34 +4,32 @@
 
 #include "media_player_controller.h"
 
+static MediaPlayerController*instance = NULL;
+
 MediaPlayerController::MediaPlayerController() {
     mSynchronizer = new MediaSynchronizer;
     mVideoOutput = new VideoOutput;
     mAudioOutput = new AudioOutput;
+    instance = this;
 }
 
 MediaPlayerController::~MediaPlayerController() {
-    if (mSynchronizer != NULL) {
-        delete mSynchronizer;
-        mSynchronizer = NULL;
-    }
-    if (mVideoOutput != NULL) {
-        delete mVideoOutput;
-        mVideoOutput = NULL;
-    }
-    if (mAudioOutput != NULL) {
-        delete mAudioOutput;
-        mAudioOutput = NULL;
-    }
+
 }
 
 void MediaPlayerController::start(const char *path) {
-    mSynchronizer->setVideoOutput(mVideoOutput);
-    mSynchronizer->start(path);
+    mSynchronizer->prepare(path);
+    int channelCount = mSynchronizer->getChannelCount();
+    int samplerate = mSynchronizer->getSamplerate();
+    LOGE("channelCount: %d samplerate:%d", channelCount, samplerate);
+    mSynchronizer->start();
+    mAudioOutput->start(channelCount, samplerate, getAudioFrame);
 }
 
 void MediaPlayerController::stop() {
-
+    mSynchronizer->finish();
+    mVideoOutput->onDestroy();
+    mAudioOutput->stop();
 }
 
 void MediaPlayerController::pause() {
@@ -63,8 +61,38 @@ void MediaPlayerController::onSurfaceSizeChanged(int width, int height) {
 }
 
 void MediaPlayerController::onSurfaceDestroy() {
-    mVideoOutput->onDestroy();
     mSynchronizer->finish();
+    mVideoOutput->onDestroy();
+    mAudioOutput->stop();
 }
+
+void MediaPlayerController::release() {
+    if (mSynchronizer != NULL) {
+        delete mSynchronizer;
+        mSynchronizer = NULL;
+    }
+    if (mVideoOutput != NULL) {
+        delete mVideoOutput;
+        mVideoOutput = NULL;
+    }
+    if (mAudioOutput != NULL) {
+        delete mAudioOutput;
+        mAudioOutput = NULL;
+    }
+    if (instance != NULL) {
+        instance = NULL;
+    }
+}
+
+AudioFrame *MediaPlayerController::getAudioFrame() {
+    LOGE("MediaPlayerController getAudioFrame");
+    return instance->mSynchronizer->getAudioFrame();
+}
+
+VideoFrame *MediaPlayerController::getVideoFrame() {
+    return instance->mSynchronizer->getVideoFrame();
+}
+
+
 
 
