@@ -36,7 +36,7 @@ public:
     void onSurfaceDestroy();
 
 private:
-    static VideoFrame* getVideoFrame();
+    static TextureFrame* getTextureFrame();
     static AudioFrame* getAudioFrame();
 
 private:

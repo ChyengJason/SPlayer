@@ -15,6 +15,7 @@ enum MsgType {
     MESSAGE_CREATE_CONTEXT,
     MESSAGE_CREATE_SURFACE,
     MESSAGE_UPDATE_SURFACE,
+    MESSAGE_DESTROY_SURFACE,
     MESSAGE_QUIT,
     MESSAGE_RENDER,
     MESSAGE_CHANGE_SIZE
@@ -32,13 +33,13 @@ public:
     VideoOutput();
     ~VideoOutput();
     void start();
+    void finish();
     void onCreated(ANativeWindow *nativeWindow);
     void onUpdated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
     void output(VideoFrame& videoFrame);
     bool postMessage(Message msg);
-    EGLContext getShareContext();
     bool isSurfaceValid();
 
 private:
@@ -50,13 +51,14 @@ private:
     void processMessages();
     void createSurfaceHandler();
     void updateSurfaceHandler();
+    void destroySurfaceHandler();
     static void* renderHandlerThread(void* self);
 
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
     GlRender mGlRender;
-    EGLSurface  mSurface;
+    EGLSurface mSurface;
     int screenWidth;
     int screenHeight;
     pthread_t mRenderHandlerThread;

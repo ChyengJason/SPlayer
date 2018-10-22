@@ -128,7 +128,6 @@ bool MediaDecoder::initAudioCodec() {
 
 bool MediaDecoder::initVideoFrameAndSwsContext() {
     mVideoFrame = av_frame_alloc();
-
     if (mVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P) {
         mYuvFrame = av_frame_alloc();
         // 关联缓存区
@@ -194,43 +193,60 @@ AVPacket* MediaDecoder::readFrame() {
 
 VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     VideoFrame *videoFrame = NULL;
-    char buffer[] = "";
-    int frameCount;
-    double pts;
-    int error;
     if (packet == NULL || packet->stream_index != mVideoStreamIndex) {
         return videoFrame;
     }
+
+    char buffer[] = "";
+    int frameCount;
+    double timestamp;
+    double duration;
+    AVFrame *resultFrame;
+    int error;
+    AVStream *videoStream = mformatContext->streams[mVideoStreamIndex];
+
     // 解码图像数据：RGBA格式保存在data[0] ，YUV格式有data[0] data[1] data[2]
     error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, packet);
     // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
-    if ((pts = av_frame_get_best_effort_timestamp(mVideoFrame)) == AV_NOPTS_VALUE) {
-        pts = 0;
-    }
-    pts *= av_q2d(mformatContext->streams[mVideoStreamIndex]->time_base);
+
+
     // 若非YUV420p格式
     if (mSwsContext && mYuvFrame) {
-        sws_scale(mSwsContext, (const uint8_t *const *)mVideoFrame->data, mVideoFrame->linesize, 0, mVideoFrame->height,
+        sws_scale(mSwsContext, (const uint8_t *const *) mVideoFrame->data, mVideoFrame->linesize, 0,
+                  mVideoFrame->height,
                   mYuvFrame->data, mYuvFrame->linesize);
         if (error < 0) {
             av_strerror(error, buffer, 1024);
             LOGE("decodeVideoFrame失败: %d(%s)", error, buffer);
             return videoFrame;
         }
-        videoFrame = createVideoFrame(pts, mYuvFrame);
+        resultFrame = mYuvFrame;
     } else {
-        videoFrame = createVideoFrame(pts, mVideoFrame);
+        resultFrame = mVideoFrame;
     }
+    int pts = av_frame_get_best_effort_timestamp(resultFrame);
+    if (pts == AV_NOPTS_VALUE) {
+        pts = 0;
+    }
+    timestamp = pts * r2d(videoStream->time_base);
+    duration = av_frame_get_pkt_duration(mYuvFrame) * r2d(videoStream->time_base);
+    if (duration <= 0 && packet->pts > 0) {
+        duration = 1.0 / packet->pts;
+    }
+    videoFrame = createVideoFrame(timestamp, duration, resultFrame);
+    LOGD("解码视频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
     return videoFrame;
 }
 
 std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
-    int error = 0;
-    char buffer[] = "";
     std::vector<AudioFrame*> audioFrames;
     if (packet == NULL || packet->stream_index != mAudioStreamIndex) {
         return audioFrames;
     }
+
+    int error = 0;
+    char buffer[] = "";
+    AVStream* audioStream = mformatContext->streams[mAudioStreamIndex];
     // 对于视频帧，一个AVPacket是一帧视频帧；对于音频帧，一个AVPacket有可能包含多个音频帧
     int packetSize = packet->size;
     while (packetSize > 0) {
@@ -251,9 +267,10 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
             }
             int size = swrlen * mAudioCodecContext->channels  * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);//每声道采样数 x 声道数 x 每个采样字节数
             // 一个 packet 中可以包含多个帧，packet 中的 PTS 比真正的播放的 PTS 可能会早很多,播放的时候需要重新纠正
-            double pts = av_q2d(mformatContext->streams[mAudioStreamIndex]->time_base) * packet->pts;
-            LOGD("创建音频帧size: %d",size);
-            AudioFrame* audioFrame = createAudioFrame(pts, size, mAudioOutBuffer);
+            double timestamp = r2d(audioStream->time_base) * packet->pts;
+            double duration = av_frame_get_pkt_duration(mAudioFrame) * r2d(audioStream->time_base);
+            AudioFrame* audioFrame = createAudioFrame(timestamp, duration, size, mAudioOutBuffer);
+            LOGD("解码音频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
             if(audioFrame) audioFrames.push_back(audioFrame);
             av_free_packet(packet);
         }
@@ -272,26 +289,27 @@ int64_t MediaDecoder::getMediaDuration() {
     return 0;
 }
 
-AudioFrame *MediaDecoder::createAudioFrame(double pts, int size, uint8_t* data) {
+AudioFrame *MediaDecoder::createAudioFrame(double timestamp , double duration, int size, uint8_t* data) {
     if (size <= 0 || data == NULL) {
         return NULL;
     }
     AudioFrame* audioFrame = new AudioFrame;
     audioFrame->size = size;
-    audioFrame->pts = pts;
+    audioFrame->timestamp  = timestamp ;
+    audioFrame->duration = duration;
     audioFrame->samplerate = mOutSampleRate;
     audioFrame->channels = mOutChannels;
     audioFrame->data = new char[size];
     memcpy(audioFrame->data, (char*)data, size);
-    LOGE("createAudioFrame");
     return audioFrame;
 }
 
-VideoFrame *MediaDecoder::createVideoFrame(double pts, AVFrame *videoFrame) {
+VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, AVFrame *videoFrame) {
     VideoFrame* yuvFrame = new VideoFrame;
     yuvFrame->width = mVideoCodecContext->width;
     yuvFrame->height = mVideoCodecContext->height;
-    yuvFrame->pts = pts;
+    yuvFrame->timestamp = timestamp;
+    yuvFrame->duration = duration;
 
     int width = std::min(videoFrame->linesize[0], mVideoCodecContext->width);
     int height = mVideoCodecContext->height;
@@ -386,4 +404,8 @@ bool MediaDecoder::isVideoPacket(AVPacket * const packet) {
 
 bool MediaDecoder::isAudioPacket(AVPacket * const packet) {
     return packet->stream_index == mAudioStreamIndex;
+}
+
+double MediaDecoder::r2d(AVRational r) {
+    return r.num == 0 || r.den == 0 ? 0.:(double)r.num/(double)r.den;
 }

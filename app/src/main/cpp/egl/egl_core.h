@@ -12,23 +12,20 @@ class EglCore {
 public:
     EglCore();
     ~EglCore();
-    void createGL();
-    void createGL(const EGLContext& shareContext);
-    void destroyGL();
+    EGLContext createGL(EGLContext context);
+    void destroyGL(EGLContext context);
     void destroySurface(EGLSurface surface);
-    EGLSurface  createWindowSurface(ANativeWindow* nativeWindow);
-    bool makeCurrent(EGLSurface draw, EGLSurface read);
-    bool makeCurrent(EGLSurface surface);
+    EGLSurface createWindowSurface(ANativeWindow* nativeWindow);
+    EGLSurface createBufferSurface(int width, int height);
+    bool makeCurrent(EGLSurface draw, EGLSurface read, EGLContext context);
+    bool makeCurrent(EGLSurface surface, EGLContext context);
     bool swapBuffers(EGLSurface surface);
-    EGLContext getShareContext();
 private:
+    EGLContext createContext(EGLContext context);
     bool setDisplay(EGLNativeDisplayType type);
     bool setConfig(int configs[]);
-    bool createContext(EGLContext context);
-
     EGLConfig mEglConfig;
     EGLDisplay mEglDisplay;
-    EGLContext mShareEglContext;
 };
 
 

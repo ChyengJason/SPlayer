@@ -101,6 +101,7 @@ void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {
 
 void MediaPlayerController::onSurfaceSizeChanged(int width, int height) {
     mVideoOutput->onChangeSize(width, height);
+    mSynchronizer->changeSize(width, height);
 }
 
 void MediaPlayerController::onSurfaceDestroy() {
@@ -133,6 +134,6 @@ AudioFrame *MediaPlayerController::getAudioFrame() {
     return instance->mSynchronizer->getAudioFrame();
 }
 
-VideoFrame *MediaPlayerController::getVideoFrame() {
-    return instance->mSynchronizer->getVideoFrame();
+TextureFrame *MediaPlayerController::getTextureFrame() {
+    return instance->mSynchronizer->getTextureFrame();
 }

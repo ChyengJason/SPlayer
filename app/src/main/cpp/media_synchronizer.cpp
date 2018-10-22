@@ -10,14 +10,19 @@ MediaSynchronizer::MediaSynchronizer() {
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
-    pthread_mutex_destroy(&mVideoQueMutex);
-    pthread_mutex_destroy(&mAudioQueMutex);
     pthread_mutex_destroy(&mDecoderMutex);
     pthread_cond_destroy(&mDecoderCond);
+    delete(mMediaDecoder);
+    delete(mAudioQue);
+    delete(mTextureQue);
 }
 
 void MediaSynchronizer::prepare(const char *path) {
     mMediaDecoder->prepare(path);
+    int width = mMediaDecoder->getWidth();
+    int height = mMediaDecoder->getHeight();
+    mTextureQue->start(width, height);
+    mAudioQue->start();
 }
 
 void MediaSynchronizer::start() {
@@ -25,10 +30,14 @@ void MediaSynchronizer::start() {
     startDecodeThread();
 }
 
+void MediaSynchronizer::changeSize(int width, int height) {
+    mTextureQue->changeSize(width, height);
+}
+
 void MediaSynchronizer::finish() {
     mMediaDecoder->finish();
-    clearAudioFrameQue();
-    clearVideoFrameQue();
+    mAudioQue->release();
+    mTextureQue->release();
     // 停止线程
 }
 
@@ -36,8 +45,6 @@ void MediaSynchronizer::startDecodeThread() {
     LOGE("创建解码线程");
     pthread_cond_init(&mDecoderCond, NULL);
     pthread_mutex_init(&mDecoderMutex, NULL);
-    pthread_mutex_init(&mVideoQueMutex, NULL);
-    pthread_mutex_init(&mAudioQueMutex, NULL);
     int ret = pthread_create(&mDecoderThread, NULL, runDecoderThread, this);
     if (ret != 0) {
         LOGE("创建 DecodeThread 失败");
@@ -53,71 +60,24 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 //        if (videoDecoder->isVideoPacket(packet)) {
 //            LOGD("解码视频帧 %d", ++count);
 //            VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
-//            synchronizer->pushVideoFrameQue(frame);
+//            synchronizer->mVideo->push(frame);
 //        } else
     if (videoDecoder->isAudioPacket(packet)){
-            LOGD("解码音频帧 %d", ++count);
+            LOGD("解码音频帧 NO.%d", ++count);
             std::vector<AudioFrame*> frames = videoDecoder->decodeAudioFrame(packet);
-            synchronizer->pushAudioFrameQue(frames);
+            synchronizer->mAudioQue->push(frames);
         }
     }
     videoDecoder->finish();
     return 0;
 }
 
-void MediaSynchronizer::clearVideoFrameQue() {
-    pthread_mutex_lock(&mVideoQueMutex);
-    while(!mVideoFrameQue.empty()) {
-        mVideoFrameQue.pop();
-    }
-    pthread_mutex_unlock(&mVideoQueMutex);
-}
-
-void MediaSynchronizer::clearAudioFrameQue() {
-    pthread_mutex_lock(&mAudioQueMutex);
-    while(!mAudioFrameQue.empty()) {
-        mAudioFrameQue.pop();
-    }
-    pthread_mutex_unlock(&mAudioQueMutex);
-}
-
-void MediaSynchronizer::pushAudioFrameQue(std::vector<AudioFrame*> vec) {
-    pthread_mutex_lock(&mAudioQueMutex);
-    std::vector<AudioFrame*>::iterator begin = vec.begin();
-    for (; begin != vec.end() ; ++begin) {
-        mAudioFrameQue.push(*begin);
-    }
-    pthread_mutex_unlock(&mAudioQueMutex);
-}
-
-void MediaSynchronizer::pushVideoFrameQue(VideoFrame *frame) {
-    pthread_mutex_lock(&mVideoQueMutex);
-    mVideoFrameQue.push(frame);
-    pthread_mutex_unlock(&mVideoQueMutex);
-}
-
-VideoFrame *MediaSynchronizer::getVideoFrame() {
-    LOGE("MediaSynchronizer getVideoFrame");
-    pthread_mutex_lock(&mVideoQueMutex);
-    VideoFrame* frame = NULL;
-    if (!mVideoFrameQue.empty()) {
-        frame = mVideoFrameQue.front();
-        mVideoFrameQue.pop();
-    }
-    pthread_mutex_unlock(&mVideoQueMutex);
-    return frame;
+TextureFrame *MediaSynchronizer::getTextureFrame() {
+    return mTextureQue->pop();
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
-    AudioFrame* frame = NULL;
-    pthread_mutex_lock(&mAudioQueMutex);
-    if (!mAudioFrameQue.empty()) {
-        frame = mAudioFrameQue.front();
-        mAudioFrameQue.pop();
-    }
-    LOGE("MediaSynchronizer getAudioFrame queue size: %d", mAudioFrameQue.size());
-    pthread_mutex_unlock(&mAudioQueMutex);
-    return frame;
+    return mAudioQue->pop();
 }
 
 long MediaSynchronizer::getProgress() {

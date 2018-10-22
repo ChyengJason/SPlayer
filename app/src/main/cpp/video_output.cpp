@@ -4,6 +4,7 @@
 
 #include "video_output.h"
 #include "android_log.h"
+#include "egl/egl_share_context.h"
 
 extern "C" {
 #include <unistd.h>
@@ -27,6 +28,11 @@ void VideoOutput::start() {
     postMessage(MESSAGE_CREATE_CONTEXT);
 }
 
+void VideoOutput::finish() {
+    postMessage(MESSAGE_QUIT);
+    isInited = false;
+}
+
 void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
     if (!isInited) {
         start();
@@ -48,7 +54,7 @@ void VideoOutput::onChangeSize(int width, int height) {
 }
 
 void VideoOutput::onDestroy() {
-    postMessage(MESSAGE_QUIT);
+    postMessage(MESSAGE_DESTROY_SURFACE);
 }
 
 void VideoOutput::createRenderHandlerThread() {
@@ -111,6 +117,9 @@ void VideoOutput::processMessages() {
             case MESSAGE_UPDATE_SURFACE:
                 updateSurfaceHandler();
                 break;
+            case MESSAGE_DESTROY_SURFACE:
+                destroySurfaceHandler();
+                break;
             case MESSAGE_RENDER:
                 renderTextureHandler(msg.value);
                 break;
@@ -130,13 +139,13 @@ void VideoOutput::processMessages() {
 }
 
 void VideoOutput::createEglContextHandler() {
-    mEglCore.createGL();
-
+    EGLContext context = mEglCore.createGL(EglShareContext::getShareContext());
+    EglShareContext::setShareContext(context);
 }
 
 void VideoOutput::createSurfaceHandler() {
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
-    mEglCore.makeCurrent(mSurface);
+    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     mGlRender.onCreated();
 }
 
@@ -145,20 +154,23 @@ void VideoOutput::updateSurfaceHandler() {
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
-    mEglCore.makeCurrent(mSurface);
+    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     mGlRender.onCreated();
 }
 
-void VideoOutput::releaseRenderHanlder() {
+void VideoOutput::destroySurfaceHandler() {
     mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
-    mEglCore.destroyGL();
     ANativeWindow_release(mNativeWindow);
 }
 
+void VideoOutput::releaseRenderHanlder() {
+    mEglCore.destroyGL(EglShareContext::getShareContext());
+}
+
 void VideoOutput::renderTextureHandler(int textureId) {
-    mEglCore.makeCurrent(mSurface);
+    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     LOGE("渲染 %d", textureId);
     //int textureId = 0;
     //mGlRender.draw(textureId);
@@ -167,10 +179,6 @@ void VideoOutput::renderTextureHandler(int textureId) {
 
 void VideoOutput::changeSizeHanlder() {
     mGlRender.onChangeSize(screenWidth, screenHeight);
-}
-
-EGLContext VideoOutput::getShareContext() {
-    return mEglCore.getShareContext();
 }
 
 bool VideoOutput::isSurfaceValid() {

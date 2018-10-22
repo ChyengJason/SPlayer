@@ -12,7 +12,7 @@ public:
     GlRender();
     ~GlRender();
     void onCreated();
-    void onChangeSize(int widht, int height);
+    void onChangeSize(int width, int height);
     void onDestroy();
     void onDraw(int textureId);
 

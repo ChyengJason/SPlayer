@@ -6,10 +6,7 @@
 #include "egl_core.h"
 #include "../android_log.h"
 
-EglCore::EglCore()
-        : mEglConfig()
-        , mEglDisplay(EGL_NO_DISPLAY)
-        , mShareEglContext(EGL_NO_CONTEXT){
+EglCore::EglCore() : mEglConfig(), mEglDisplay(EGL_NO_DISPLAY) {
 
 }
 
@@ -17,11 +14,7 @@ EglCore::~EglCore() {
 
 }
 
-void EglCore::createGL() {
-    createGL(mShareEglContext);
-}
-
-void EglCore::createGL(const EGLContext &shareContext) {
+EGLContext EglCore::createGL(EGLContext context) {
     int configAttribs[] = {
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT,      // 渲染类型
             EGL_RED_SIZE, 8,  // 指定 RGB 中的 R 大小（bits）
@@ -33,21 +26,25 @@ void EglCore::createGL(const EGLContext &shareContext) {
             EGL_NONE
     };
     // 设置显示设备
-    setDisplay(EGL_DEFAULT_DISPLAY);
+    if(!setDisplay(EGL_DEFAULT_DISPLAY)) {
+        return EGL_NO_CONTEXT;
+    }
     // 设置属性
-    setConfig(configAttribs);
+    if(!setConfig(configAttribs)) {
+        return EGL_NO_CONTEXT;
+    }
     // 创建上下文
-    createContext(shareContext);
+    return createContext(context);
 }
 
-void EglCore::destroyGL() {
+void EglCore::destroyGL(EGLContext context) {
     eglMakeCurrent(mEglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    if (mShareEglContext) {
-        eglDestroyContext(mEglDisplay, mShareEglContext);
-        mShareEglContext = EGL_NO_CONTEXT;
+    if (context != EGL_NO_CONTEXT) {
+        eglDestroyContext(mEglDisplay, context);
+        context = EGL_NO_CONTEXT;
     }
-    eglDestroyContext(mEglDisplay, mShareEglContext);
-    mShareEglContext = EGL_NO_CONTEXT;
+    eglDestroyContext(mEglDisplay, context);
+    context = EGL_NO_CONTEXT;
     mEglDisplay = EGL_NO_DISPLAY;
     eglTerminate(mEglDisplay);
 }
@@ -63,22 +60,18 @@ bool EglCore::setDisplay(EGLNativeDisplayType type) {
 bool EglCore::setConfig(int *configAttribs) {
     int numConfigs;
     if (!eglChooseConfig(mEglDisplay, configAttribs, &mEglConfig, 1, &numConfigs)) {
-        destroyGL();
+        destroyGL(EGL_NO_CONTEXT);
         return false;
     }
     return true;
 }
 
-bool EglCore::createContext(EGLContext context) {
+EGLContext EglCore::createContext(EGLContext context) {
     int contextAttribs[] = {
             EGL_CONTEXT_CLIENT_VERSION, 3,
             EGL_NONE
     };
-    mShareEglContext = eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
-    if (mShareEglContext == EGL_NO_CONTEXT) {
-        return false;
-    }
-    return true;
+    return eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
 }
 
 EGLSurface EglCore::createWindowSurface(ANativeWindow *nativeWindow) {
@@ -99,24 +92,31 @@ EGLSurface EglCore::createWindowSurface(ANativeWindow *nativeWindow) {
     return surface;
 }
 
+EGLSurface EglCore::createBufferSurface(int width, int height) {
+    EGLSurface surface;
+    EGLint PbufferAttributes[] = { EGL_WIDTH, width, EGL_HEIGHT, height, EGL_NONE, EGL_NONE};
+    if (!(surface = eglCreatePbufferSurface(mEglDisplay, mEglConfig, PbufferAttributes))) {
+        LOGE("createBufferSurface error %d", eglGetError());
+    }
+    return surface;
+}
+
 void EglCore::destroySurface(EGLSurface surface) {
-    eglDestroySurface(mEglDisplay, surface);
+    if (surface != EGL_NO_CONTEXT) {
+        eglDestroySurface(mEglDisplay, surface);
+    }
 }
 
 
-bool EglCore::makeCurrent(EGLSurface surface) {
-    return makeCurrent(surface, surface);
+bool EglCore::makeCurrent(EGLSurface surface, EGLContext context) {
+    return makeCurrent(surface, surface, context);
 }
 
-bool EglCore::makeCurrent(EGLSurface draw, EGLSurface read) {
-    eglMakeCurrent(mEglDisplay, draw, read, mShareEglContext);
+bool EglCore::makeCurrent(EGLSurface draw, EGLSurface read, EGLContext context) {
+    eglMakeCurrent(mEglDisplay, draw, read, context);
     return false;
 }
 
 bool EglCore::swapBuffers(EGLSurface surface) {
     return eglSwapBuffers(mEglDisplay, surface);
-}
-
-EGLContext EglCore::getShareContext() {
-    return mShareEglContext;
 }

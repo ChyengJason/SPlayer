@@ -36,9 +36,12 @@ add_library(video-player-lib SHARED
             src/main/cpp/media_decoder.cpp
             src/main/cpp/media_player_controller.cpp
             src/main/cpp/media_synchronizer.cpp
+            src/main/cpp/video_queue.cpp
+            src/main/cpp/audio_queue.cpp
             src/main/cpp/video_output.cpp
             src/main/cpp/audio_output.cpp
             src/main/cpp/egl/egl_core.cpp
+            src/main/cpp/egl/egl_share_context.cpp
             src/main/cpp/render/gl_render.cpp
             src/main/cpp/render/gl_render_util.cpp
             src/main/cpp/opensl/audio_player.cpp

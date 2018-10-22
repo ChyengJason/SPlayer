@@ -15,12 +15,15 @@ public:
         if (chromaB) delete(chromaB);
         if (chromaR) delete(chromaR);
     }
+
+public:
     uint8_t * luma;
     uint8_t * chromaB;
     uint8_t * chromaR;
-    double pts;
+    double timestamp;
     int height;
     int width;
+    double duration;
 };
 
 class AudioFrame {
@@ -31,10 +34,22 @@ public:
     }
     int samplerate;
     int channels;
-    double pts;
+    double timestamp;
     char *data;
     int size;
+    double duration;
 };
 
+
+class TextureFrame {
+public:
+    TextureFrame() {}
+    ~TextureFrame() {}
+    double timestamp;
+    int height;
+    int width;
+    int textureId;
+    double duration;
+};
 #endif //SPLAYER_AUDIOFRAME_H
 

@@ -19,51 +19,31 @@ extern "C" {
 class MediaDecoder {
 public:
     MediaDecoder();
-
     ~MediaDecoder();
-
     bool prepare(const char* path);
-
-    AVPacket* readFrame();
-
-    VideoFrame* decodeVideoFrame(AVPacket*);
-
-    std::vector<AudioFrame*> decodeAudioFrame(AVPacket*);
-
     void finish();
-
+    AVPacket* readFrame();
+    VideoFrame* decodeVideoFrame(AVPacket*);
+    std::vector<AudioFrame*> decodeAudioFrame(AVPacket*);
     int64_t getMediaDuration();
-
     int getSamplerate();
-
     int getChannelCount();
-
     bool isVideoPacket(AVPacket* const packet);
-
     bool isAudioPacket(AVPacket* const packet);
 
 private:
     bool init(const char* path);
-
-    bool getMediaInfo(const char* path);
-
     bool initVideoCodec();
-
     bool initAudioCodec();
-
     bool initVideoFrameAndSwsContext();
-
     bool initAudioFrameAndSwrContext();
-
     void initPacket();
-
+    bool getMediaInfo(const char* path);
     void release();
-
-    VideoFrame *createVideoFrame(double pts, AVFrame *videoFrame);
-
-    AudioFrame *createAudioFrame(double pts, int size, uint8_t* data);
-
+    VideoFrame *createVideoFrame(double timestamp , double duration, AVFrame *videoFrame);
+    AudioFrame *createAudioFrame(double timestamp , double duration, int size, uint8_t* data);
     void copyFrameData(uint8_t *dst, uint8_t *src, int width, int height, int linesize);
+    double r2d(AVRational r);
 
 private:
     AVFormatContext *mformatContext;
@@ -71,24 +51,25 @@ private:
     AVCodecContext *mAudioCodecContext;
     AVCodec *mVideoCodec;
     AVCodec *mAudioCodec;
-    int mVideoStreamIndex;
+    AVPacket*packet;
+
+    // 音频相关
     int mAudioStreamIndex;
-
-    SwsContext* mSwsContext;
     SwrContext* mSwrContext;
-
+    uint8_t *mAudioOutBuffer;
+    int mAudioOutBufferSize;
+    AVFrame *mAudioFrame;
     int64_t mOutChannelLayout;
     AVSampleFormat mOutFormat;
     int mOutSampleRate;
     int mOutChannels;
 
-    int mAudioOutBufferSize;
-    uint8_t *mAudioOutBuffer;
+    // 视频相关
+    int mVideoStreamIndex;
+    SwsContext* mSwsContext;
     uint8_t *mVideoOutBuffer;
     AVFrame *mVideoFrame;
     AVFrame *mYuvFrame;
-    AVFrame *mAudioFrame;
-    AVPacket*packet;
 };
 
 #endif //SPLAYER_VIDEO_DECODER_H
