@@ -8,7 +8,8 @@
 #include <android/native_window_jni.h>
 #include "media_frame.h"
 #include "egl/egl_core.h"
-#include "render/gl_render.h"
+#include "render/gl_base_render.h"
+#include "render/gl_yuv_render.h"
 #include <queue>
 
 enum MsgType {
@@ -57,7 +58,7 @@ private:
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlRender mGlRender;
+    GlYuvRender mGlRender;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;

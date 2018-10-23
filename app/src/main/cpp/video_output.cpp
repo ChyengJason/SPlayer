@@ -60,7 +60,10 @@ void VideoOutput::onDestroy() {
 void VideoOutput::createRenderHandlerThread() {
     pthread_mutex_init(&mRenderHandlerMutex, NULL);
     pthread_cond_init(&mRenderHandlerCond, NULL);
-    pthread_create(&mRenderHandlerThread, NULL, renderHandlerThread, this);
+    int ret = pthread_create(&mRenderHandlerThread, NULL, renderHandlerThread, this);
+    if (ret < 0) {
+        LOGE("createRenderHandlerThread fail");
+    }
 }
 
 void VideoOutput::output(VideoFrame &videoFrame) {
@@ -170,11 +173,11 @@ void VideoOutput::releaseRenderHanlder() {
 }
 
 void VideoOutput::renderTextureHandler(int textureId) {
-    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
+    //mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     LOGE("渲染 %d", textureId);
     //int textureId = 0;
     //mGlRender.draw(textureId);
-    mEglCore.swapBuffers(mSurface);
+    //mEglCore.swapBuffers(mSurface);
 }
 
 void VideoOutput::changeSizeHanlder() {

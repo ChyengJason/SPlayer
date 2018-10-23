@@ -4,12 +4,13 @@
 
 #include <EGL/egl.h>
 #include "egl_share_context.h"
-EglShareContext::mShareContext = EGL_NO_CONTEXT;
+
+EGLContext EglShareContext::mShareContext = EGL_NO_CONTEXT;
 
 EGLContext EglShareContext::getShareContext() {
     return mShareContext;
 }
 
 void EglShareContext::setShareContext(EGLContext context) {
-    mShareContext = EGL_NO_CONTEXT;
+    mShareContext = context;
 }

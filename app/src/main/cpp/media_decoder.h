@@ -30,6 +30,8 @@ public:
     int getChannelCount();
     bool isVideoPacket(AVPacket* const packet);
     bool isAudioPacket(AVPacket* const packet);
+    int getHeight();
+    int getWidth();
 
 private:
     bool init(const char* path);

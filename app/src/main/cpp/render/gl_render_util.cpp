@@ -135,3 +135,16 @@ void GlRenderUtil::bindFrameRender(int frameBufferId, int renderId, int width, i
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, renderId);
 }
+
+void GlRenderUtil::deleteFrameBuffer(GLuint fbo) {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+}
+
+void GlRenderUtil::deleteTexture(GLuint texture) {
+    glDeleteTextures(1, &texture);
+}
+
+void GlRenderUtil::unBindFrameTexture() {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}

@@ -6,6 +6,8 @@
 
 MediaSynchronizer::MediaSynchronizer() {
     mMediaDecoder = new MediaDecoder;
+    mAudioQue = new AudioQueue;
+    mTextureQue = new VideoQueue;
     curPresentTime = 0;
 }
 
@@ -21,7 +23,7 @@ void MediaSynchronizer::prepare(const char *path) {
     mMediaDecoder->prepare(path);
     int width = mMediaDecoder->getWidth();
     int height = mMediaDecoder->getHeight();
-    mTextureQue->start(width, height);
+//    mTextureQue->start(width, height);
     mAudioQue->start();
 }
 
@@ -30,14 +32,10 @@ void MediaSynchronizer::start() {
     startDecodeThread();
 }
 
-void MediaSynchronizer::changeSize(int width, int height) {
-    mTextureQue->changeSize(width, height);
-}
-
 void MediaSynchronizer::finish() {
     mMediaDecoder->finish();
     mAudioQue->release();
-    mTextureQue->release();
+//    mTextureQue->release();
     // 停止线程
 }
 
@@ -57,12 +55,11 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
     int count = 0;
     AVPacket* packet;
     while ((packet = videoDecoder->readFrame()) != NULL) {
-//        if (videoDecoder->isVideoPacket(packet)) {
-//            LOGD("解码视频帧 %d", ++count);
+        if (videoDecoder->isVideoPacket(packet)) {
+            LOGD("解码视频帧 %d", ++count);
 //            VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
-//            synchronizer->mVideo->push(frame);
-//        } else
-    if (videoDecoder->isAudioPacket(packet)){
+//            synchronizer->mTextureQue->push(frame);
+        } else if (videoDecoder->isAudioPacket(packet)){
             LOGD("解码音频帧 NO.%d", ++count);
             std::vector<AudioFrame*> frames = videoDecoder->decodeAudioFrame(packet);
             synchronizer->mAudioQue->push(frames);
@@ -73,11 +70,13 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 TextureFrame *MediaSynchronizer::getTextureFrame() {
-    return mTextureQue->pop();
+//    return mTextureQue->pop();
+    return NULL;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     return mAudioQue->pop();
+//    return NULL;
 }
 
 long MediaSynchronizer::getProgress() {

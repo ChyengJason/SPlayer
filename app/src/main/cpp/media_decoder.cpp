@@ -159,7 +159,6 @@ bool MediaDecoder::initAudioFrameAndSwrContext() {
     mAudioOutBufferSize = av_samples_get_buffer_size(NULL, mOutChannels, mOutSampleRate, mOutFormat, 1);
     mAudioOutBuffer = (uint8_t*) av_malloc(mAudioOutBufferSize);
 
-    LOGE("outChannelLayout: %ld", mOutChannelLayout);
     LOGE("samperate: %d", mOutSampleRate);
     LOGE("channel: %d", mOutChannels);
     LOGE("bufferSize: %d" , mAudioOutBufferSize);
@@ -408,4 +407,12 @@ bool MediaDecoder::isAudioPacket(AVPacket * const packet) {
 
 double MediaDecoder::r2d(AVRational r) {
     return r.num == 0 || r.den == 0 ? 0.:(double)r.num/(double)r.den;
+}
+
+int MediaDecoder::getWidth() {
+    return mVideoCodecContext->width;
+}
+
+int MediaDecoder::getHeight() {
+    return mVideoCodecContext->height;
 }

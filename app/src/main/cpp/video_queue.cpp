@@ -25,11 +25,14 @@ VideoQueue::~VideoQueue() {
 }
 
 void VideoQueue::start(int width, int height) {
+    LOGE("videoqueue start: %d x %d", width, height);
     this->width = width;
     this->height = height;
     if (!isCreateRendered) {
+        LOGE("videoqueue start: createRenderThread");
         createRenderThread();
     } else {
+        LOGE("videoqueue start: signalRender");
         signalRender();
     }
 }
@@ -41,16 +44,7 @@ void VideoQueue::release() {
     pthread_cond_signal(&mRenderCond);
     pthread_mutex_unlock(&mVideoFrameMutex);
     clear();
-    mEglCore.destroySurface(mPbufferSurface);
-    mEglCore.destroyGL(EglShareContext::getShareContext());
-    mGlRender.onDestroy();
 }
-
-//void VideoQueue::changeSize(int width, int height) {
-//    this->width = width;
-//    this->height = height;
-//    mGlRender.onChangeSize(width, height);
-//}
 
 void VideoQueue::push(VideoFrame *frame) {
     pthread_mutex_lock(&mVideoFrameMutex);
@@ -97,6 +91,7 @@ int VideoQueue::size() {
 }
 
 void VideoQueue::createRenderThread() {
+    LOGE("videoQue createRenderThread");
     isCreateRendered = true;
     isRunning = true;
     int ret = pthread_create(&mRenderThread, NULL, runRender, this);
@@ -125,6 +120,7 @@ void VideoQueue::createRender() {
     mEglCore.makeCurrent(shareContext, mPbufferSurface);
     mGlRender.onCreated();
     mGlRender.onChangeSize(width, height);
+    createFboRender();
 }
 
 void VideoQueue::processRender() {
@@ -148,11 +144,38 @@ void VideoQueue::processRender() {
             pthread_mutex_unlock(&mTextureFrameMutex);
         }
     }
+    destroyRender();
 }
 
-TextureFrame *VideoQueue::textureRender(VideoFrame *pFrame) {
+TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
     mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
-    // 创建 fbo 和 texture2D
+    // 创建texture2D
+    int outTexture = GlRenderUtil::createTexture(width, height);
+    // 绑定到fbo
+    GlRenderUtil::bindFrameTexture(mFbo, outTexture);
+    // 绘制VideoFrame 到 fbo中
+    mGlRender.onDraw(pFrame->luma, pFrame->chromaB, pFrame->chromaR);
+    // 解绑 fbo
+    GlRenderUtil::unBindFrameTexture();
+    TextureFrame* textureFrame = new TextureFrame;
+    textureFrame->height = pFrame->height;
+    textureFrame->width = pFrame->width;
+    textureFrame->duration = pFrame->duration;
+    textureFrame->timestamp = pFrame->timestamp;
+    textureFrame->textureId = outTexture;
+    return textureFrame;
+}
 
-    return NULL;
+void VideoQueue::createFboRender() {
+    // 创建 fbo
+    mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
+    mFbo = GlRenderUtil::createFrameBuffer();
+}
+
+void VideoQueue::destroyRender() {
+    mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
+    if (mFbo) GlRenderUtil::deleteFrameBuffer(mFbo);
+    mGlRender.onDestroy();
+    mEglCore.destroySurface(mPbufferSurface);
+    mEglCore.destroyGL(EglShareContext::getShareContext());
 }

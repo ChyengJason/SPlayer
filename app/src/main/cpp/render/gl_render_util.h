@@ -23,6 +23,8 @@ namespace GlRenderUtil {
 
     GLuint createTexture(int width, int height);
 
+    void deleteTexture(GLuint texture);
+
     GLuint createExternalTexture();
 
     void checkError(const char* tip);
@@ -33,7 +35,11 @@ namespace GlRenderUtil {
 
     GLuint createRenderBuffer();
 
+    void deleteFrameBuffer(GLuint fbo);
+
     void bindFrameTexture(int frameBufferId, int textureId);
+
+    void unBindFrameTexture();
 
     void bindFrameRender(int frameBufferId, int renderId, int width, int height);
 };

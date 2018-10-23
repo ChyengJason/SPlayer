@@ -3,6 +3,7 @@
 //
 
 #include <android/native_window.h>
+#include <GLES3/gl3.h>
 #include "egl_core.h"
 #include "../android_log.h"
 
@@ -27,10 +28,12 @@ EGLContext EglCore::createGL(EGLContext context) {
     };
     // 设置显示设备
     if(!setDisplay(EGL_DEFAULT_DISPLAY)) {
+        LOGE("core setDisplay failed");
         return EGL_NO_CONTEXT;
     }
     // 设置属性
     if(!setConfig(configAttribs)) {
+        LOGE("core setconfig failed");
         return EGL_NO_CONTEXT;
     }
     // 创建上下文
@@ -71,7 +74,9 @@ EGLContext EglCore::createContext(EGLContext context) {
             EGL_CONTEXT_CLIENT_VERSION, 3,
             EGL_NONE
     };
-    return eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
+    EGLContext shareContext = eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
+    LOGE("EglCore checkerror ：%d", glGetError());
+    return shareContext;
 }
 
 EGLSurface EglCore::createWindowSurface(ANativeWindow *nativeWindow) {

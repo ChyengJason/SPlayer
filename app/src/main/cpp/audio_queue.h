@@ -12,6 +12,8 @@ class AudioQueue {
 public:
     AudioQueue();
     ~AudioQueue();
+    void start();
+    void release();
     void push(AudioFrame* frame);
     void push(std::vector<AudioFrame*> frames);
     AudioFrame* pop();
@@ -19,13 +21,9 @@ public:
     void clear();
     int size();
 
-public:
+private:
     pthread_mutex_t mQueMutex;
     std::queue<AudioFrame*> mAudioFrameQue;
-
-    void release();
-
-    void start();
 };
 
 

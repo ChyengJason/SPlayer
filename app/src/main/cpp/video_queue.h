@@ -8,7 +8,8 @@
 #include <queue>
 #include "media_frame.h"
 #include "egl/egl_core.h"
-#include "render/gl_render.h"
+#include "render/gl_base_render.h"
+#include "render/gl_yuv_render.h"
 
 class VideoQueue {
 public:
@@ -20,9 +21,7 @@ public:
     bool isEmpty();
     void clear();
     int size();
-
     void start(int width, int height);
-    void changeSize(int width, int height);
 
 private:
     void createRenderThread();
@@ -30,7 +29,9 @@ private:
     void signalRender();
     void createRender();
     void processRender();
-    TextureFrame *textureRender(VideoFrame *pFrame);
+    void createFboRender();
+    void destroyRender();
+    TextureFrame *textureRender(const VideoFrame *pFrame);
 
 private:
     pthread_mutex_t mVideoFrameMutex;
@@ -43,10 +44,11 @@ private:
     bool isRunning;
 
     EglCore mEglCore;
-    GlRender mGlRender;
+    GlYuvRender mGlRender;
     EGLSurface mPbufferSurface;
     int width;
     int height;
+    int mFbo;
 };
 
 

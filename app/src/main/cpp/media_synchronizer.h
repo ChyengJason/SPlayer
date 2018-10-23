@@ -24,7 +24,6 @@ public:
     MediaSynchronizer();
     ~MediaSynchronizer();
     void prepare(const char* path);
-    void changeSize(int width, int height);
     void start();
     void finish();
     long getProgress();
