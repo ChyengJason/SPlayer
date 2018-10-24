@@ -99,13 +99,13 @@ void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {
     }
 }
 
-void MediaPlayerController::onSurfaceSizeChanged(int width, int height) {
-    mVideoOutput->onChangeSize(width, height);
+void MediaPlayerController::onSurfaceSizeChanged(int screenWidth, int screenHeight) {
+    mVideoOutput->onChangeSize(screenWidth, screenHeight);
 }
 
 void MediaPlayerController::onSurfaceDestroy() {
     mVideoOutput->onDestroy();
-    LOGE("mstatus %d", mStatus);
+    LOGE("MediaPlayerController onSurfaceDestroy status %d", mStatus);
     if (mStatus == PLAY) {
         suspend();
     }

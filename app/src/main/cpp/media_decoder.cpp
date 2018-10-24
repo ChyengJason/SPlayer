@@ -208,7 +208,6 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, packet);
     // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
 
-
     // 若非YUV420p格式
     if (mSwsContext && mYuvFrame) {
         sws_scale(mSwsContext, (const uint8_t *const *) mVideoFrame->data, mVideoFrame->linesize, 0,
@@ -228,7 +227,7 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
         pts = 0;
     }
     timestamp = pts * r2d(videoStream->time_base);
-    duration = av_frame_get_pkt_duration(mYuvFrame) * r2d(videoStream->time_base);
+    duration = av_frame_get_pkt_duration(resultFrame) * r2d(videoStream->time_base);
     if (duration <= 0 && packet->pts > 0) {
         duration = 1.0 / packet->pts;
     }
@@ -305,8 +304,8 @@ AudioFrame *MediaDecoder::createAudioFrame(double timestamp , double duration, i
 
 VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, AVFrame *videoFrame) {
     VideoFrame* yuvFrame = new VideoFrame;
-    yuvFrame->width = mVideoCodecContext->width;
-    yuvFrame->height = mVideoCodecContext->height;
+    yuvFrame->frameWidth = mVideoCodecContext->width;
+    yuvFrame->frameHeight = mVideoCodecContext->height;
     yuvFrame->timestamp = timestamp;
     yuvFrame->duration = duration;
 

@@ -37,6 +37,7 @@ AudioFrame *AudioQueue::pop() {
         result = mAudioFrameQue.front();
         mAudioFrameQue.pop();
     }
+    pthread_mutex_unlock(&mQueMutex);
     return result;
 }
 

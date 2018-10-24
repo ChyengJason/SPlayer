@@ -32,9 +32,9 @@ Java_com_jscheng_splayer_player_VideoPlayer_onSurfaceCreated(JNIEnv *env, jobjec
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_onSurfaceSizeChanged(JNIEnv *env, jobject instance,
-                                                                 jint width, jint height) {
+                                                                 jint screenWidth, jint screenHeight) {
     LOGE("jni onSurfaceSizeChanged");
-    mPlayerController->onSurfaceSizeChanged(width, height);
+    mPlayerController->onSurfaceSizeChanged(screenWidth, screenHeight);
 }
 
 extern "C"

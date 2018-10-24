@@ -46,8 +46,8 @@ private:
     EglCore mEglCore;
     GlYuvRender mGlRender;
     EGLSurface mPbufferSurface;
-    int width;
-    int height;
+    int frameWidth;
+    int frameHeight;
     int mFbo;
 };
 

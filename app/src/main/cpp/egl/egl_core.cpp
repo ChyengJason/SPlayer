@@ -103,6 +103,7 @@ EGLSurface EglCore::createBufferSurface(int width, int height) {
     if (!(surface = eglCreatePbufferSurface(mEglDisplay, mEglConfig, PbufferAttributes))) {
         LOGE("createBufferSurface error %d", eglGetError());
     }
+    LOGE("EglCore createBufferSurface checkerror ：%d", glGetError());
     return surface;
 }
 
@@ -119,7 +120,8 @@ bool EglCore::makeCurrent(EGLSurface surface, EGLContext context) {
 
 bool EglCore::makeCurrent(EGLSurface draw, EGLSurface read, EGLContext context) {
     eglMakeCurrent(mEglDisplay, draw, read, context);
-    return false;
+    //LOGE("EglCore makeCurrent checkerror ：%d", glGetError());
+    return true;
 }
 
 bool EglCore::swapBuffers(EGLSurface surface) {

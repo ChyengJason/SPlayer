@@ -95,10 +95,12 @@ GLuint GlRenderUtil::createExternalTexture() {
     return texture;
 }
 
-void GlRenderUtil::checkError(const char *tip) {
+bool GlRenderUtil::checkError(const char *tip) {
     if (glGetError() != GL_NO_ERROR) {
-        LOGE("checkError %s %d", tip, glGetError());
+        LOGE("GlRenderUtil checkError %s %d", tip, glGetError());
+        return false;
     }
+    return true;
 }
 
 GLuint GlRenderUtil::createPixelsBuffer() {

@@ -21,8 +21,8 @@ public:
     uint8_t * chromaB;
     uint8_t * chromaR;
     double timestamp;
-    int height;
-    int width;
+    int frameHeight;
+    int frameWidth;
     double duration;
 };
 
@@ -46,8 +46,8 @@ public:
     TextureFrame() {}
     ~TextureFrame() {}
     double timestamp;
-    int height;
-    int width;
+    int screenHeight;
+    int screenWidth;
     int textureId;
     double duration;
 };

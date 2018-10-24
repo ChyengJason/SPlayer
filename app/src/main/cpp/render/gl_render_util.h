@@ -27,7 +27,7 @@ namespace GlRenderUtil {
 
     GLuint createExternalTexture();
 
-    void checkError(const char* tip);
+    bool checkError(const char* tip);
 
     GLuint createPixelsBuffer();
 

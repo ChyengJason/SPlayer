@@ -47,9 +47,9 @@ void VideoOutput::onUpdated(ANativeWindow *nativeWindow) {
     postMessage(MESSAGE_UPDATE_SURFACE);
 }
 
-void VideoOutput::onChangeSize(int width, int height) {
-    screenHeight = height;
-    screenWidth = width;
+void VideoOutput::onChangeSize(int screenWidth, int screenHeight) {
+    this->screenHeight = screenHeight;
+    this->screenWidth = screenWidth;
     postMessage(MESSAGE_CHANGE_SIZE);
 }
 
@@ -67,7 +67,7 @@ void VideoOutput::createRenderHandlerThread() {
 }
 
 void VideoOutput::output(VideoFrame &videoFrame) {
-    if (videoFrame.width <= 0 || videoFrame.height <= 0) {
+    if (videoFrame.frameWidth <= 0 || videoFrame.frameHeight <= 0) {
         return;
     }
     postMessage(MESSAGE_RENDER);
@@ -101,15 +101,15 @@ void VideoOutput::processMessages() {
             return ;
         }
         if (mHandlerMessageQueue.empty()) {
-            LOGE("MESSAGE 等待");
+            LOGE("VideoOutput MESSAGE 等待");
             pthread_cond_wait(&mRenderHandlerCond, &mRenderHandlerMutex);
-            LOGE("MESSAGE 结束唤醒");
+            LOGE("VideoOutput MESSAGE 结束唤醒");
             pthread_mutex_unlock(&mRenderHandlerMutex);
             continue;
         }
         Message msg = mHandlerMessageQueue.front();
         mHandlerMessageQueue.pop();
-        LOGE("MESSAGE %d", msg.msgType);
+        LOGE("VideoOutput MESSAGE %d", msg.msgType);
         switch (msg.msgType) {
             case MESSAGE_CREATE_CONTEXT:
                 createEglContextHandler();

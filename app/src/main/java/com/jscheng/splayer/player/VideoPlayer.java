@@ -20,7 +20,7 @@ public class VideoPlayer {
 
     public native void onSurfaceCreated(Surface surface);
 
-    public native void onSurfaceSizeChanged(int width, int height);
+    public native void onSurfaceSizeChanged(int screenWidth, int screenHeight);
 
     public native void onSurfaceDestroy();
 

@@ -16,9 +16,9 @@ AudioPlayer::~AudioPlayer() {
 }
 
 void AudioPlayer::create(size_t samplerate, size_t channelCount) {
-    LOGE("创建引擎：%d", createEngine());
-    LOGE("创建混音：%d", createMixVolume());
-    LOGE("创建播放器: %d", createPlayer(samplerate, channelCount));
+    LOGD("AudioPlayer createEngine：%d", createEngine());
+    LOGD("AudioPlayer createMixVolume：%d", createMixVolume());
+    LOGD("AudioPlayer createPlayer: %d", createPlayer(samplerate, channelCount));
 }
 
 bool AudioPlayer::createEngine() {
@@ -105,11 +105,10 @@ void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterf
     AudioPlayer* player = (AudioPlayer*) context;
     AudioFrame* audioFrame;
     bool isExist = player->getAudioFrameCallback(&audioFrame);
-    LOGE("PlayerCallback");
     if (isExist && audioFrame != NULL) {
         SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, audioFrame->data, audioFrame->size);
-        LOGE("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(audioFrame), strlen(audioFrame->data));
-        //delete audioFrame;
+        LOGD("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(audioFrame), strlen(audioFrame->data));
+        delete audioFrame;
     }
 }
 
@@ -120,7 +119,6 @@ bool AudioPlayer::pause() {
 
 bool AudioPlayer::play() {
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PLAYING);
-    LOGE("play() SetPlayState %d", result == SL_RESULT_SUCCESS);
     PlayerCallback(mBufferQueueInterface, this);
     return result == SL_RESULT_SUCCESS;
 }

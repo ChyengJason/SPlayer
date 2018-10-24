@@ -24,10 +24,10 @@ VideoQueue::~VideoQueue() {
     pthread_mutex_destroy(&mVideoFrameMutex);
 }
 
-void VideoQueue::start(int width, int height) {
-    LOGE("videoqueue start: %d x %d", width, height);
-    this->width = width;
-    this->height = height;
+void VideoQueue::start(int frameWidth, int frameHeight) {
+    LOGE("videoqueue start: %d x %d", frameWidth, frameHeight);
+    this->frameWidth = frameWidth;
+    this->frameHeight = frameHeight;
     if (!isCreateRendered) {
         LOGE("videoqueue start: createRenderThread");
         createRenderThread();
@@ -114,26 +114,28 @@ void VideoQueue::signalRender() {
 }
 
 void VideoQueue::createRender() {
+    LOGE("videoQueue createRender shareContext1 %d", EglShareContext::getShareContext());
     EGLContext shareContext = mEglCore.createGL(EglShareContext::getShareContext());
     EglShareContext::setShareContext(shareContext);
-    mPbufferSurface = mEglCore.createBufferSurface(width, height);
-    mEglCore.makeCurrent(shareContext, mPbufferSurface);
+    mPbufferSurface = mEglCore.createBufferSurface(frameWidth, frameHeight);
+    mEglCore.makeCurrent(mPbufferSurface, shareContext);
     mGlRender.onCreated();
-    mGlRender.onChangeSize(width, height);
+    mGlRender.onChangeSize(frameWidth, frameHeight);
     createFboRender();
 }
 
 void VideoQueue::processRender() {
     while(isRunning) {
         pthread_mutex_lock(&mVideoFrameMutex);
-        VideoFrame* videoFrame = mVideoFrameQue.front();
-        if(videoFrame == NULL) {
+        if(mVideoFrameQue.empty()) {
             LOGE("mVideoFrameQue 等待");
             pthread_cond_wait(&mRenderCond, &mVideoFrameMutex);
             LOGE("mVideoFrameQue 苏醒");
             pthread_mutex_unlock(&mVideoFrameMutex);
             continue;
         }
+        VideoFrame* videoFrame = mVideoFrameQue.front();
+        LOGE("processRender textureRender timestamp %lf,  %d x %d", videoFrame->timestamp, videoFrame->frameWidth, videoFrame->frameHeight);
         mVideoFrameQue.pop();
         pthread_mutex_unlock(&mVideoFrameMutex);
         TextureFrame* textureFrame = textureRender(videoFrame);
@@ -148,18 +150,22 @@ void VideoQueue::processRender() {
 }
 
 TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
+    LOGE("videoQueue textureRender %lf", pFrame->timestamp);
     mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
     // 创建texture2D
-    int outTexture = GlRenderUtil::createTexture(width, height);
+    int outTexture = GlRenderUtil::createTexture(frameWidth, frameHeight);
     // 绑定到fbo
+    LOGE("videoQueue createTexture %d", outTexture);
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
+    LOGE("videoQueue onDraw %d x %d", pFrame->frameWidth, pFrame->frameHeight);
+
     mGlRender.onDraw(pFrame->luma, pFrame->chromaB, pFrame->chromaR);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
     TextureFrame* textureFrame = new TextureFrame;
-    textureFrame->height = pFrame->height;
-    textureFrame->width = pFrame->width;
+    textureFrame->screenHeight = pFrame->frameHeight;
+    textureFrame->screenWidth = pFrame->frameWidth;
     textureFrame->duration = pFrame->duration;
     textureFrame->timestamp = pFrame->timestamp;
     textureFrame->textureId = outTexture;
@@ -168,6 +174,7 @@ TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
 
 void VideoQueue::createFboRender() {
     // 创建 fbo
+    LOGE("videoQueue createFboRender");
     mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
     mFbo = GlRenderUtil::createFrameBuffer();
 }
