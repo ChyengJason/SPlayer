@@ -98,9 +98,9 @@ GLuint GlRenderUtil::createExternalTexture() {
 bool GlRenderUtil::checkError(const char *tip) {
     if (glGetError() != GL_NO_ERROR) {
         LOGE("GlRenderUtil checkError %s %d", tip, glGetError());
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 GLuint GlRenderUtil::createPixelsBuffer() {

@@ -75,7 +75,6 @@ EGLContext EglCore::createContext(EGLContext context) {
             EGL_NONE
     };
     EGLContext shareContext = eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
-    LOGE("EglCore checkerror ：%d", glGetError());
     return shareContext;
 }
 

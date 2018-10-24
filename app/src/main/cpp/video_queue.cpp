@@ -114,7 +114,6 @@ void VideoQueue::signalRender() {
 }
 
 void VideoQueue::createRender() {
-    LOGE("videoQueue createRender shareContext1 %d", EglShareContext::getShareContext());
     EGLContext shareContext = mEglCore.createGL(EglShareContext::getShareContext());
     EglShareContext::setShareContext(shareContext);
     mPbufferSurface = mEglCore.createBufferSurface(frameWidth, frameHeight);
@@ -155,7 +154,7 @@ TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
     // 创建texture2D
     int outTexture = GlRenderUtil::createTexture(frameWidth, frameHeight);
     // 绑定到fbo
-    LOGE("videoQueue createTexture %d", outTexture);
+    LOGE("videoQueue createTexture %d mFbo %d", outTexture, mFbo);
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
     LOGE("videoQueue onDraw %d x %d", pFrame->frameWidth, pFrame->frameHeight);

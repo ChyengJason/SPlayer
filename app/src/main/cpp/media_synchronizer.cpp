@@ -54,13 +54,13 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
     MediaDecoder* videoDecoder = synchronizer->mMediaDecoder;
     int count = 0;
     AVPacket* packet;
-    while ((packet = videoDecoder->readFrame()) != NULL) {
+    while ((packet = videoDecoder->readFrame()) != NULL && count <= 10) {
         if (videoDecoder->isVideoPacket(packet)) {
             LOGD("解码视频帧 %d", ++count);
             VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
             synchronizer->mTextureQue->push(frame);
         } else if (videoDecoder->isAudioPacket(packet)){
-            LOGD("解码音频帧 NO.%d", ++count);
+//            LOGD("解码音频帧 NO.%d", ++count);
 //            std::vector<AudioFrame*> frames = videoDecoder->decodeAudioFrame(packet);
 //            synchronizer->mAudioQue->push(frames);
         }

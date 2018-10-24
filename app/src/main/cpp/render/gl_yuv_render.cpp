@@ -47,8 +47,8 @@ void GlYuvRender::onCreated() {
     vexPositionHandle = glGetAttribLocation(program, "position");
     fragCoordHandle = glGetAttribLocation(program, "texcoord");
     textureYHandle = glGetUniformLocation(program, "texture_y");
-    textureVHandle = glGetUniformLocation(program, "texture_u");
-    textureUHandle = glGetUniformLocation(program, "texture_v");
+    textureUHandle = glGetUniformLocation(program, "texture_u");
+    textureVHandle = glGetUniformLocation(program, "texture_v");
     createVertexBufferObjects();
     textureY = createTextures();
     textureU = createTextures();
@@ -57,6 +57,10 @@ void GlYuvRender::onCreated() {
     LOGE("textureY: %d", textureY);
     LOGE("textureU: %d", textureU);
     LOGE("textureV: %d", textureV);
+    LOGE("textureYHandle: %d", textureYHandle);
+    LOGE("textureUHandle: %d", textureUHandle);
+    LOGE("textureVHandle: %d", textureVHandle);
+    LOGE("verPosArrayBufferId: %d", verPosArrayBufferId);
 }
 
 void GlYuvRender::onChangeSize(int width, int height) {
@@ -138,23 +142,11 @@ GLuint GlYuvRender::createTextures() {
     GLuint textureId;
     glGenTextures(1, &textureId);
     glBindTexture(GL_TEXTURE_2D, textureId);
-    if (!GlRenderUtil::checkError("glBindTexture")) {
-        return -1;
-    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    if (!GlRenderUtil::checkError("glTexParameteri")) {
-        return -1;
-    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    if (!GlRenderUtil::checkError("glTexParameteri")) {
-        return -1;
-    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    if (!GlRenderUtil::checkError("glTexParameteri")) {
-        return -1;
-    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    if (!GlRenderUtil::checkError("glTexParameteri")) {
+    if (GlRenderUtil::checkError("glTexParameter")) {
         return -1;
     }
     return textureId;
