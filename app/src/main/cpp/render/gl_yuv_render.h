@@ -19,7 +19,6 @@ public:
 private:
     int loadVertexShader();
     int loadFragmentShader();
-    void createVertexBufferObjects();
     void bindTexture(int glTexture, int textureHandle, int width, int height, void*buffer);
     void freeTextures();
 
@@ -35,7 +34,5 @@ private:
     int textureY;
     int textureU;
     int textureV;
-    GLuint verPosArrayBufferId;
-    GLuint fragCoordArrayBufferId;
 };
 #endif //SPLAYER_GL_YUV_RENDER_H

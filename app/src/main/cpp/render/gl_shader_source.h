@@ -43,12 +43,11 @@ namespace GlShaderSource {
                yuv.x = texture2D(texture_y, v_texcoord).r;
                yuv.y = texture2D(texture_u, v_texcoord).r - 0.5;
                yuv.z = texture2D(texture_v, v_texcoord).r - 0.5;
-               rgb = mat3 ( 1,       1,        1,
-                            0,       -0.39465, 2.03211,
-                            1.13983, -0.58060, 0 ) * yuv;
+                rgb = mat3( 1,       1,         1,
+                            0,       -0.39465,  2.03211,
+                            1.13983, -0.58060,  0) * yuv;
                gl_FragColor = vec4(rgb, 1);
             }
     );
-
 };
 #endif //SPLAYER_GL_SHADER_SOURCE_H_

@@ -39,7 +39,7 @@ public:
     void onUpdated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    void output(TextureFrame *textureFrame);
+    void output(VideoFrame *frame);
     bool postMessage(Message msg);
     bool isSurfaceValid();
 
@@ -47,7 +47,7 @@ private:
     void createEglContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
-    void renderTextureHandler(TextureFrame *textureFrame);
+    void renderTextureHandler(VideoFrame *videoFrame);
     void changeSizeHanlder();
     void processMessages();
     void createSurfaceHandler();
@@ -58,7 +58,7 @@ private:
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlBaseRender mGlRender;
+    GlYuvRender mGlRender;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;

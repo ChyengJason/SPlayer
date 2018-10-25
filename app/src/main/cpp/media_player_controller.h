@@ -10,14 +10,6 @@
 #include "media_synchronizer.h"
 #include "audio_output.h"
 
-enum MediaStatus {
-    UNINITED,
-    STOP,
-    PLAY,
-    PAUSE,
-    SUSPEND
-};
-
 class MediaPlayerController {
 public:
     MediaPlayerController();
@@ -36,14 +28,8 @@ public:
     void onSurfaceDestroy();
 
 private:
-    static TextureFrame* getTextureFrame();
-    static AudioFrame* getAudioFrame();
-
-private:
-    MediaSynchronizer *mSynchronizer;
     VideoOutput *mVideoOutput;
-    AudioOutput *mAudioOutput;
-    MediaStatus mStatus;
+    MediaDecoder *mMediaDecoder;
 };
 
 
