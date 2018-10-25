@@ -20,7 +20,6 @@ private:
     int loadVertexShader();
     int loadFragmentShader();
     void createVertexBufferObjects();
-    GLuint createTextures();
     void bindTexture(int glTexture, int textureHandle, int width, int height, void*buffer);
     void freeTextures();
 
@@ -33,9 +32,9 @@ private:
     GLint textureYHandle;
     GLint textureUHandle;
     GLint textureVHandle;
-    GLuint textureY;
-    GLuint textureU;
-    GLuint textureV;
+    int textureY;
+    int textureU;
+    int textureV;
     GLuint verPosArrayBufferId;
     GLuint fragCoordArrayBufferId;
 };

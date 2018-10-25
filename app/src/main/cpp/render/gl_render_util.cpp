@@ -58,17 +58,27 @@ GLuint GlRenderUtil::loadShader(GLenum shaderType, const char* shaderSource) {
     return shader;
 }
 
-GLuint GlRenderUtil::createTexture(int width, int height) {
+int GlRenderUtil::createTexture() {
+    GLuint textureId;
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    if (GlRenderUtil::checkError("glTexParameter")) {
+        return -1;
+    }
+    return textureId;
+}
+
+int GlRenderUtil::createTexture(int width, int height) {
     if (width <= 0 || height <= 0 ) {
         LOGE("cretaeTexture width or height <= 0");
         return -1;
     }
     GLuint texture;
     glGenTextures(1, &texture);
-    if (texture == 0) {
-        LOGE("createFrameTexture: glGenTextures is 0");
-        return -1;
-    }
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     // 设置环绕方向 S，截取纹理坐标到 [1/2n,1-1/2n]。将导致永远不会与 border 融合
@@ -83,7 +93,7 @@ GLuint GlRenderUtil::createTexture(int width, int height) {
     return texture;
 }
 
-GLuint GlRenderUtil::createExternalTexture() {
+int GlRenderUtil::createExternalTexture() {
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture);
@@ -92,6 +102,9 @@ GLuint GlRenderUtil::createExternalTexture() {
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+    if (GlRenderUtil::checkError("createExternalTexture")) {
+        return -1;
+    }
     return texture;
 }
 

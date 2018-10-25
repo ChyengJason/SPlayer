@@ -32,11 +32,14 @@ void MediaPlayerController::start(const char *path) {
     if (!mVideoOutput->isSurfaceValid()) {
         pause();
     }
+    int count = 0;
     while (mStatus == PLAY) {
         TextureFrame* textureFrame = getTextureFrame();
         if ( textureFrame != NULL) {
             LOGE("controller output textureFrame %d", textureFrame->textureId);
             mVideoOutput->output(textureFrame);
+        }
+        if (count++ > 3) {
             break;
         }
     }

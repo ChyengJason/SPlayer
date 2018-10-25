@@ -134,7 +134,7 @@ void VideoQueue::processRender() {
             continue;
         }
         VideoFrame* videoFrame = mVideoFrameQue.front();
-        LOGE("processRender textureRender timestamp %lf,  %d x %d", videoFrame->timestamp, videoFrame->frameWidth, videoFrame->frameHeight);
+        //LOGE("processRender textureRender timestamp %lf,  %d x %d", videoFrame->timestamp, videoFrame->frameWidth, videoFrame->frameHeight);
         mVideoFrameQue.pop();
         pthread_mutex_unlock(&mVideoFrameMutex);
         TextureFrame* textureFrame = textureRender(videoFrame);
@@ -149,16 +149,13 @@ void VideoQueue::processRender() {
 }
 
 TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
-    LOGE("videoQueue textureRender %lf", pFrame->timestamp);
     mEglCore.makeCurrent(mPbufferSurface, EglShareContext::getShareContext());
     // 创建texture2D
     int outTexture = GlRenderUtil::createTexture(frameWidth, frameHeight);
     // 绑定到fbo
-    LOGE("videoQueue createTexture %d mFbo %d", outTexture, mFbo);
+    LOGE("videoQueue drawTexture %d mFbo %d onDraw %d x %d", outTexture, mFbo, pFrame->frameWidth, pFrame->frameHeight);
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
-    LOGE("videoQueue onDraw %d x %d", pFrame->frameWidth, pFrame->frameHeight);
-
     mGlRender.onDraw(pFrame);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();

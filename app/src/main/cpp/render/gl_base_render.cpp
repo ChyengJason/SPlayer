@@ -72,7 +72,7 @@ int GlBaseRender::loadFragmentShader() {
 void GlBaseRender ::onDraw(int textureId) {
     GlRenderUtil::useProgram(program);
     glViewport(0, 0, screenWidth, screenHeight);
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnableVertexAttribArray(vexPosition);
@@ -85,9 +85,9 @@ void GlBaseRender ::onDraw(int textureId) {
     glVertexAttribPointer(fragCoord, CoordsPerTextureCount, GL_FLOAT, false, 0, 0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, textureId);
-    glUniform1i(fragTexture, 0);
+    glUniform1i(fragTexture, 4);
     // 绘制 GLES30.GL_TRIANGLE_STRIP: 复用坐标
     glDrawArrays(GL_TRIANGLE_STRIP, 0, VertexCount);
     glBindTexture(GL_TEXTURE_2D, 0);

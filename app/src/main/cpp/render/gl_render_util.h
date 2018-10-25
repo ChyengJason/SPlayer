@@ -21,11 +21,13 @@ namespace GlRenderUtil {
 
     GLuint loadShader(GLenum shaderType, const char* shaderSource);
 
-    GLuint createTexture(int width, int height);
+    int createTexture();
+
+    int createTexture(int width, int height);
 
     void deleteTexture(GLuint texture);
 
-    GLuint createExternalTexture();
+    int createExternalTexture();
 
     bool checkError(const char* tip);
 
