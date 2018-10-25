@@ -66,11 +66,8 @@ void VideoOutput::createRenderHandlerThread() {
     }
 }
 
-void VideoOutput::output(VideoFrame &videoFrame) {
-    if (videoFrame.frameWidth <= 0 || videoFrame.frameHeight <= 0) {
-        return;
-    }
-    postMessage(MESSAGE_RENDER);
+void VideoOutput::output(TextureFrame* textureFrame) {
+    postMessage(Message(MESSAGE_RENDER, textureFrame));
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
@@ -124,7 +121,7 @@ void VideoOutput::processMessages() {
                 destroySurfaceHandler();
                 break;
             case MESSAGE_RENDER:
-                renderTextureHandler(msg.value);
+                renderTextureHandler((TextureFrame*)msg.value);
                 break;
             case MESSAGE_CHANGE_SIZE:
                 changeSizeHanlder();
@@ -172,12 +169,16 @@ void VideoOutput::releaseRenderHanlder() {
     mEglCore.destroyGL(EglShareContext::getShareContext());
 }
 
-void VideoOutput::renderTextureHandler(int textureId) {
-    //mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-    LOGE("渲染 %d", textureId);
-    //int textureId = 0;
-    //mGlRender.draw(textureId);
-    //mEglCore.swapBuffers(mSurface);
+void VideoOutput::renderTextureHandler(TextureFrame* textureFrame) {
+    LOGE("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
+    if (textureFrame->textureId >= 0) {
+        mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
+        mGlRender.onDraw(textureFrame->textureId);
+        mEglCore.swapBuffers(mSurface);
+        // 删除textureId
+        GlRenderUtil::deleteTexture(textureFrame->textureId);
+        delete(textureFrame);
+    }
 }
 
 void VideoOutput::changeSizeHanlder() {

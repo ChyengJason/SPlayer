@@ -86,11 +86,11 @@ int GlYuvRender::loadFragmentShader() {
     return shader;
 }
 
-void GlYuvRender::onDraw(void *luma, void *chromaB, void *chromaR) {
+void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
     LOGE("GlYuvRender::onDraw");
     GlRenderUtil::useProgram(program);
     glViewport(0, 0, frameWidth, frameHeight);
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnableVertexAttribArray(vexPositionHandle);
@@ -104,9 +104,9 @@ void GlYuvRender::onDraw(void *luma, void *chromaB, void *chromaR) {
 
     //绑定纹理
     LOGE("GlYuvRender::bindTexture");
-    bindTexture(GL_TEXTURE0, textureY, frameWidth, frameHeight, luma);
-    bindTexture(GL_TEXTURE1, textureU, frameWidth / 2, frameHeight / 2, chromaB);
-    bindTexture(GL_TEXTURE2, textureV, frameWidth / 2, frameHeight / 2, chromaR);
+    bindTexture(GL_TEXTURE0, textureY, videoFrame->frameWidth, videoFrame->frameHeight, videoFrame->luma);
+    bindTexture(GL_TEXTURE1, textureU, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaB);
+    bindTexture(GL_TEXTURE2, textureV, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaR);
 
     LOGE("GlYuvRender::bindTexture finish");
     //片元中uniform 2维均匀变量赋值
@@ -135,7 +135,7 @@ void GlYuvRender::createVertexBufferObjects() {
 
     fragCoordArrayBufferId = vbo[1];
     glBindBuffer(GL_ARRAY_BUFFER, fragCoordArrayBufferId);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(FrameCoordData), FrameCoordData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(TextureCoordData), TextureCoordData, GL_STATIC_DRAW);
 }
 
 GLuint GlYuvRender::createTextures() {
@@ -154,7 +154,14 @@ GLuint GlYuvRender::createTextures() {
 
 void GlYuvRender::bindTexture(int glTexture, int textureHandle, int width, int height, void *buffer) {
     glActiveTexture(glTexture);
+    if (width % 4 != 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    }
     glBindTexture(GL_TEXTURE_2D, textureHandle);
+    glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, buffer);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -164,4 +171,3 @@ void GlYuvRender::freeTextures() {
     glDeleteTextures(1, &textureU);
     glDeleteTextures(1, &textureV);
 }
-

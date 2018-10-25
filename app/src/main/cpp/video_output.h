@@ -24,9 +24,9 @@ enum MsgType {
 
 struct Message {
     Message(MsgType type) : msgType(type), value(0) {}
-    Message(MsgType type, int val) : msgType(type), value(val) {}
+    Message(MsgType type, void* val) : msgType(type), value(val) {}
     MsgType msgType;
-    int value;
+    void* value;
 };
 
 class VideoOutput{
@@ -39,7 +39,7 @@ public:
     void onUpdated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    void output(VideoFrame& videoFrame);
+    void output(TextureFrame *textureFrame);
     bool postMessage(Message msg);
     bool isSurfaceValid();
 
@@ -47,7 +47,7 @@ private:
     void createEglContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
-    void renderTextureHandler(int textureId);
+    void renderTextureHandler(TextureFrame *textureFrame);
     void changeSizeHanlder();
     void processMessages();
     void createSurfaceHandler();

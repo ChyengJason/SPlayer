@@ -159,7 +159,7 @@ TextureFrame *VideoQueue::textureRender(const VideoFrame *pFrame) {
     // 绘制VideoFrame 到 fbo中
     LOGE("videoQueue onDraw %d x %d", pFrame->frameWidth, pFrame->frameHeight);
 
-    mGlRender.onDraw(pFrame->luma, pFrame->chromaB, pFrame->chromaR);
+    mGlRender.onDraw(pFrame);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
     TextureFrame* textureFrame = new TextureFrame;

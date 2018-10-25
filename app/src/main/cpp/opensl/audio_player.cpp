@@ -108,7 +108,7 @@ void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterf
     if (isExist && audioFrame != NULL) {
         SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, audioFrame->data, audioFrame->size);
         LOGD("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(audioFrame), strlen(audioFrame->data));
-        delete audioFrame;
+        //delete audioFrame;
     }
 }
 

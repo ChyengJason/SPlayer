@@ -5,6 +5,7 @@
 #ifndef SPLAYER_GL_YUV_RENDER_H
 #define SPLAYER_GL_YUV_RENDER_H
 #include "gl_render_util.h"
+#include "../media_frame.h"
 
 class GlYuvRender {
 public:
@@ -13,7 +14,7 @@ public:
     void onCreated();
     void onChangeSize(int width, int height);
     void onDestroy();
-    void onDraw(void *luma, void *chromaB, void *chromaR);
+    void onDraw(const VideoFrame* videoFrame);
 
 private:
     int loadVertexShader();

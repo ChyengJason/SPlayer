@@ -128,19 +128,14 @@ bool MediaDecoder::initAudioCodec() {
 
 bool MediaDecoder::initVideoFrameAndSwsContext() {
     mVideoFrame = av_frame_alloc();
-    if (mVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P) {
-        mYuvFrame = av_frame_alloc();
-        // 关联缓存区
-        mVideoOutBuffer = (uint8_t *)av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height));
-        avpicture_fill((AVPicture*)mYuvFrame, mVideoOutBuffer, AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height);
-        // 视频图像的转换, 比如格式转换
-        mSwsContext = sws_getContext(mVideoCodecContext->width, mVideoCodecContext->height, mVideoCodecContext->pix_fmt,
-                                     mVideoCodecContext->width, mVideoCodecContext->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
-        LOGE("创建YUV420p转换器");
-    } else {
-        mYuvFrame = NULL;
-        mSwsContext = NULL;
-    }
+    mYuvFrame = av_frame_alloc();
+    // 关联缓存区
+    mVideoOutBuffer = (uint8_t *)av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height));
+    avpicture_fill((AVPicture*)mYuvFrame, mVideoOutBuffer, AV_PIX_FMT_YUV420P, mVideoCodecContext->width, mVideoCodecContext->height);
+    // 视频图像的转换, 比如格式转换
+    mSwsContext = sws_getContext(mVideoCodecContext->width, mVideoCodecContext->height, mVideoCodecContext->pix_fmt,
+                                 mVideoCodecContext->width, mVideoCodecContext->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+    LOGE("创建YUV420p转换器");
     LOGE("视频宽度: %d, 高度: %d", mVideoCodecContext->width, mVideoCodecContext->height);
     return true;
 }
@@ -150,7 +145,7 @@ bool MediaDecoder::initAudioFrameAndSwrContext() {
     char buffer[] = "";
     mSwrContext = swr_alloc();
     mAudioFrame = av_frame_alloc();
-     // 输出的采样率必须与输入相同
+    // 输出的采样率必须与输入相同
     mOutChannelLayout = AV_CH_LAYOUT_STEREO;
 
     mOutFormat = AV_SAMPLE_FMT_S16;
@@ -164,8 +159,8 @@ bool MediaDecoder::initAudioFrameAndSwrContext() {
     LOGE("bufferSize: %d" , mAudioOutBufferSize);
 
     swr_alloc_set_opts(mSwrContext, mOutChannelLayout, mOutFormat, mOutSampleRate,
-                                     mAudioCodecContext->channel_layout, mAudioCodecContext->sample_fmt, mAudioCodecContext->sample_rate,
-                                     0, NULL);
+                       mAudioCodecContext->channel_layout, mAudioCodecContext->sample_fmt, mAudioCodecContext->sample_rate,
+                       0, NULL);
     error = swr_init(mSwrContext);
     if (error < 0) {
         av_strerror(error, buffer, 1024);
@@ -200,7 +195,6 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     int frameCount;
     double timestamp;
     double duration;
-    AVFrame *resultFrame;
     int error;
     AVStream *videoStream = mformatContext->streams[mVideoStreamIndex];
 
@@ -208,30 +202,24 @@ VideoFrame* MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     error = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &frameCount, packet);
     // av_frame_get_best_effort_timestamp 可能失败，播放需要做纠正
 
-    // 若非YUV420p格式
-    if (mSwsContext && mYuvFrame) {
-        sws_scale(mSwsContext, (const uint8_t *const *) mVideoFrame->data, mVideoFrame->linesize, 0,
-                  mVideoFrame->height,
-                  mYuvFrame->data, mYuvFrame->linesize);
-        if (error < 0) {
-            av_strerror(error, buffer, 1024);
-            LOGE("decodeVideoFrame失败: %d(%s)", error, buffer);
-            return videoFrame;
-        }
-        resultFrame = mYuvFrame;
-    } else {
-        resultFrame = mVideoFrame;
+    sws_scale(mSwsContext, (const uint8_t *const *) mVideoFrame->data, mVideoFrame->linesize, 0,
+              mVideoFrame->height,
+              mYuvFrame->data, mYuvFrame->linesize);
+    if (error < 0) {
+        av_strerror(error, buffer, 1024);
+        LOGE("decodeVideoFrame失败: %d(%s)", error, buffer);
+        return videoFrame;
     }
-    int pts = av_frame_get_best_effort_timestamp(resultFrame);
+    int pts = av_frame_get_best_effort_timestamp(mYuvFrame);
     if (pts == AV_NOPTS_VALUE) {
         pts = 0;
     }
     timestamp = pts * r2d(videoStream->time_base);
-    duration = av_frame_get_pkt_duration(resultFrame) * r2d(videoStream->time_base);
+    duration = av_frame_get_pkt_duration(mYuvFrame) * r2d(videoStream->time_base);
     if (duration <= 0 && packet->pts > 0) {
         duration = 1.0 / packet->pts;
     }
-    videoFrame = createVideoFrame(timestamp, duration, resultFrame);
+    videoFrame = createVideoFrame(timestamp, duration, mYuvFrame);
     LOGD("解码视频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
     return videoFrame;
 }

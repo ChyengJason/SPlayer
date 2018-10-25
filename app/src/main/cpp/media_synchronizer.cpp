@@ -54,7 +54,7 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
     MediaDecoder* videoDecoder = synchronizer->mMediaDecoder;
     int count = 0;
     AVPacket* packet;
-    while ((packet = videoDecoder->readFrame()) != NULL && count <= 10) {
+    while ((packet = videoDecoder->readFrame()) != NULL && count < 100) {
         if (videoDecoder->isVideoPacket(packet)) {
             LOGD("解码视频帧 %d", ++count);
             VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
@@ -71,7 +71,6 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 
 TextureFrame *MediaSynchronizer::getTextureFrame() {
     return mTextureQue->pop();
-//    return NULL;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
