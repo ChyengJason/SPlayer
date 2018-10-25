@@ -10,6 +10,7 @@
 #include "egl/egl_core.h"
 #include "render/gl_base_render.h"
 #include "render/gl_yuv_render.h"
+#include "render/gl_trianger_render.h"
 #include <queue>
 
 enum MsgType {
@@ -58,7 +59,7 @@ private:
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlYuvRender mGlRender;
+    GlTriangerRender mGlRender;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;

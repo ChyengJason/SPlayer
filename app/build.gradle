@@ -17,11 +17,6 @@ android {
                 abiFilters 'armeabi'
             }
         }
-        sourceSets {
-            main {
-                jniLibs.srcDirs = ['libs']
-            }
-        }
     }
     buildTypes {
         release {
@@ -30,6 +25,11 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"

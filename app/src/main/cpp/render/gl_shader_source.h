@@ -49,5 +49,20 @@ namespace GlShaderSource {
                gl_FragColor = vec4(rgb, 1);
             }
     );
+
+    const static char* TRIANGER_VERTEX_SOURCE = GET_STR(
+         attribute vec4 vPosition;
+         void main() {
+             gl_Position = vPosition;
+         }
+    );
+
+    const static char* TRIANGER_FRAGMENT_SOURCE = GET_STR(
+            precision mediump float;
+            uniform vec4 vColor;
+            void main() {
+                gl_FragColor = vColor;
+            }
+    );
 };
 #endif //SPLAYER_GL_SHADER_SOURCE_H_

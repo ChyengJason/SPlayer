@@ -172,17 +172,18 @@ void VideoOutput::releaseRenderHanlder() {
 void VideoOutput::renderTextureHandler(VideoFrame* videoFrame) {
     LOGE("VideoOutput 屏幕尺寸 %d x %d", screenWidth, screenHeight);
     if (videoFrame != NULL) {
-        mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-        mGlRender.onDraw(videoFrame);
-        mEglCore.swapBuffers(mSurface);
+//        mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
+        //mGlRender.onDraw(videoFrame);
+//        mEglCore.swapBuffers(mSurface);
 //        // 删除textureId
 //        GlRenderUtil::deleteTexture(textureFrame->textureId);
-        delete(videoFrame);
+//        delete(videoFrame);
     }
 }
 
 void VideoOutput::changeSizeHanlder() {
     mGlRender.onChangeSize(screenWidth, screenHeight);
+    mGlRender.onDraw();
 }
 
 bool VideoOutput::isSurfaceValid() {
