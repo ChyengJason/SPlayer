@@ -23,9 +23,11 @@ VideoOutput::~VideoOutput() {
 
 void VideoOutput::start() {
     LOGE("当前主线程：%lu", (unsigned long)pthread_self());
-    createRenderHandlerThread();
-    isInited = true;
-    postMessage(MESSAGE_CREATE_CONTEXT);
+    if (!isInited) {
+        createRenderHandlerThread();
+        isInited = true;
+        postMessage(MESSAGE_CREATE_CONTEXT);
+    }
 }
 
 void VideoOutput::finish() {
@@ -182,6 +184,7 @@ void VideoOutput::renderTextureHandler(VideoFrame* videoFrame) {
 }
 
 void VideoOutput::changeSizeHanlder() {
+    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     mGlRender.onChangeSize(screenWidth, screenHeight);
     mGlRender.onDraw();
 }

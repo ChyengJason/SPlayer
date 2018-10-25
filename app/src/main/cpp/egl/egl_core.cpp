@@ -23,9 +23,10 @@ EGLContext EglCore::createGL(EGLContext context) {
             EGL_BLUE_SIZE, 8,  // 指定 B 大小
             EGL_ALPHA_SIZE, 8, // 指定 Alpha 大小
             EGL_DEPTH_SIZE, 8, // 指定深度 (Z Buffer) 大小
-            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, // 指定渲染 api 类别,
+           // EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, // 指定渲染 api 类别,
             EGL_NONE
     };
+
     // 设置显示设备
     if(!setDisplay(EGL_DEFAULT_DISPLAY)) {
         LOGE("core setDisplay failed");
@@ -75,6 +76,7 @@ EGLContext EglCore::createContext(EGLContext context) {
             EGL_NONE
     };
     EGLContext shareContext = eglCreateContext(mEglDisplay, mEglConfig, context, contextAttribs);
+
     return shareContext;
 }
 
@@ -93,6 +95,10 @@ EGLSurface EglCore::createWindowSurface(ANativeWindow *nativeWindow) {
     if (!(surface = eglCreateWindowSurface(mEglDisplay, mEglConfig, nativeWindow, 0))) {
         LOGE("eglCreateWindowSurface() returned error %d", eglGetError());
     }
+    int width, height;
+    eglQuerySurface(mEglDisplay, surface, EGL_WIDTH, &width);
+    eglQuerySurface(mEglDisplay, surface, EGL_HEIGHT, &height);
+    LOGE("createWindowSurface eglQuerySurface : %d x %d", width, height);
     return surface;
 }
 
