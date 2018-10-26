@@ -6,12 +6,10 @@
 #include "gl_shader_source.h"
 
 const float triangleCoords[] = {
-    0.5f,  0.5f, // top
-    -0.5f, -0.5f, // bottom left
-    0.5f, -0.5f// bottom right
+        0.5f,  0.5f, // top
+        -0.5f, -0.5f, // bottom left
+        0.5f, -0.5f// bottom right
 };
-
-const float color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 GlTriangerRender::GlTriangerRender() {
 
@@ -22,11 +20,11 @@ GlTriangerRender::~GlTriangerRender() {
 }
 
 void GlTriangerRender::onCreated() {
-    LOGE("GlYuvRender onCreated");
+    LOGE("GlTriangerRender onCreated");
+    glClearColor(0.0f, 0.0f, 0.0f, 0.3f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_TEXTURE_2D);
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
-    vexPositionHandle = glGetAttribLocation(program, "vPosition");
-    colorHandle = glGetUniformLocation(program, "vColor");
-    LOGE("program: %d", program);
 }
 
 int GlTriangerRender::loadVertexShader() {
@@ -40,7 +38,7 @@ int GlTriangerRender::loadFragmentShader() {
 }
 
 void GlTriangerRender::onChangeSize(int width, int height) {
-    glViewport(0,0,width,height);
+    glViewport(0, 0, width, height);
 }
 
 void GlTriangerRender::onDestroy() {
@@ -48,17 +46,20 @@ void GlTriangerRender::onDestroy() {
 }
 
 void GlTriangerRender::onDraw() {
-    //将程序加入到OpenGLES2.0环境
-    glUseProgram(program);
+    LOGE("GlTriangerRender onDraw");
+    GlRenderUtil::useProgram(program);
+    LOGE("program: %d", program);
+    vexPositionHandle = glGetAttribLocation(program, "vPosition");
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //启用三角形顶点的句柄
     glEnableVertexAttribArray(vexPositionHandle);
     //准备三角形的坐标数据
     glVertexAttribPointer(vexPositionHandle, 2, GL_FLOAT, false, 0, triangleCoords);
     //获取片元着色器的vColor成员的句柄
-    //设置绘制三角形的颜色
-    glUniform4fv(colorHandle, 4, color);
     //绘制三角形
-    glDrawArrays(GL_TRIANGLES, 0, 4);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 3);
     //禁止顶点数组的句柄
     glDisableVertexAttribArray(vexPositionHandle);
 }

@@ -7,7 +7,7 @@
 
 MediaPlayerController::MediaPlayerController() {
     mVideoOutput = new VideoOutput;
-//    mMediaDecoder = new MediaDecoder;
+    mMediaDecoder = new MediaDecoder;
 }
 
 MediaPlayerController::~MediaPlayerController() {
@@ -15,19 +15,20 @@ MediaPlayerController::~MediaPlayerController() {
 }
 
 void MediaPlayerController::start(const char *path) {
-//    mMediaDecoder->prepare(path);
+    mMediaDecoder->prepare(path);
     mVideoOutput->start();
-//    AVPacket* packet;
-//    int count = 0;
-//    while ((packet = mMediaDecoder->readFrame()) != NULL && count < 20) {
-//        if (mMediaDecoder->isVideoPacket(packet)) {
-//            std::vector<VideoFrame*> vec= mMediaDecoder->decodeVideoFrame(packet);
-//            if (!vec.empty()) {
-//                mVideoOutput->output(vec[0]);
-//            }
-//            count++;
-//        }
-//    }
+    AVPacket* packet;
+    int count = 0;
+    while ((packet = mMediaDecoder->readFrame()) != NULL) {
+        if (mMediaDecoder->isVideoPacket(packet)) {
+            std::vector<VideoFrame*> vec= mMediaDecoder->decodeVideoFrame(packet);
+            if (!vec.empty()) {
+                mVideoOutput->output(vec[0]);
+                break;
+            }
+            count++;
+        }
+    }
 }
 
 void MediaPlayerController::stop() {
