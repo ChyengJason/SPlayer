@@ -20,7 +20,7 @@ void MediaPlayerController::start(const char *path) {
     AVPacket* packet;
     int count = 0;
     while ((packet = mMediaDecoder->readFrame()) != NULL) {
-        if (mMediaDecoder->isVideoPacket(packet)) {
+        if (mMediaDecoder->isVideoPacket(packet) ) {
             std::vector<VideoFrame*> vec= mMediaDecoder->decodeVideoFrame(packet);
             if (!vec.empty()) {
                 mVideoOutput->output(vec[0]);

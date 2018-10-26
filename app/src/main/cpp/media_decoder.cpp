@@ -28,7 +28,6 @@ bool MediaDecoder::init(const char* path) {
         release();
         return false;
     }
-    initPacket();
     initVideoFrameAndSwsContext();
 
     return true;
@@ -39,6 +38,7 @@ void MediaDecoder::finish() {
 }
 
 bool MediaDecoder::getMediaInfo(const char* path) {
+    LOGE("path %s", path);
     int error;
     char buffer[] = "";
     // 注册网络协议
@@ -67,6 +67,7 @@ bool MediaDecoder::getMediaInfo(const char* path) {
     for (int i = 0; i < mformatContext->nb_streams; ++i) {
         enum AVMediaType type = mformatContext->streams[i]->codec->codec_type;
         if (type == AVMEDIA_TYPE_VIDEO) {
+            LOGE("查找视频流：%d", i);
             mVideoStreamIndex = i;
         }
     }
@@ -81,11 +82,23 @@ bool MediaDecoder::getMediaInfo(const char* path) {
 bool MediaDecoder::initVideoCodec() {
     int error;
     char buffer[] = "";
-    mVideoCodecContext = mformatContext->streams[mVideoStreamIndex]->codec;
+    AVStream *videoStream = mformatContext->streams[mVideoStreamIndex];
+    mVideoCodecContext = videoStream->codec;
     // 寻找解码器
     mVideoCodec = avcodec_find_decoder(mVideoCodecContext->codec_id);
     // 打开解码器
     error = avcodec_open2(mVideoCodecContext, mVideoCodec, NULL);
+
+    int degress = 0;
+    AVDictionary *videoStreamMetadata = videoStream->metadata;
+    AVDictionaryEntry* entry = NULL;
+    while ((entry = av_dict_get(videoStreamMetadata, "", entry, AV_DICT_IGNORE_SUFFIX))){
+        printf("entry: key is %s value is %s\n", entry->key, entry->value);
+        if (0 == strcmp(entry->key, "rotate")) {
+            degress = atoi(entry->value);
+        }
+    }
+    LOGE("video 角度：%d", degress);
     if (error < 0) {
         av_strerror(error, buffer, 1024);
         LOGE("打开视频解码器失败: %d(%s)", error, buffer);
@@ -103,18 +116,15 @@ bool MediaDecoder::initVideoFrameAndSwsContext() {
     return true;
 }
 
-void MediaDecoder::initPacket() {
-    packet = (AVPacket *)av_malloc(sizeof(AVPacket));
-    av_init_packet(packet);
-}
-
 AVPacket* MediaDecoder::readFrame() {
     if (mformatContext == NULL) {
         return NULL;
     }
+    AVPacket* packet = new AVPacket;
     if (av_read_frame(mformatContext, packet) >= 0) {
         return packet;
     }
+    delete packet;
     return NULL;
 }
 
@@ -125,7 +135,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     double duration = 0;
     int pktSize = packet->size;
     while (pktSize > 0) {
-        LOGE("开始解码解码视频帧");
+        LOGE("开始解码视频帧");
         int len = avcodec_decode_video2(mVideoCodecContext, mVideoFrame, &gotframe, packet);
         LOGE("解码视频帧：len %d, frameCount %d pktSize %d", len, gotframe, pktSize);
         if (len < 0) {
@@ -137,11 +147,13 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
             LOGD("解码视频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
             vec.push_back(videoFrame);
         }
+        av_free(mVideoFrame);
         if (0 == len) {
             break;
         }
         pktSize -= len;
     }
+    av_free_packet(packet);
     LOGE("解码完成");
     return vec;
 }
@@ -164,20 +176,17 @@ VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, A
     int width = mVideoCodecContext->width;
     int height = mVideoCodecContext->height;
 
-    int lumaLength = std::min(videoFrame->linesize[0], width) * height;
-    uint8_t * luma = new uint8_t[lumaLength];
-    copyFrameData(luma, videoFrame->data[0], width, height, videoFrame->linesize[0]);
-    yuvFrame->luma = luma;
+    int lumaLength = height * std::min(videoFrame->linesize[0], width);
+    yuvFrame->luma = new uint8_t[lumaLength];
+    copyFrameData(yuvFrame->luma, videoFrame->data[0], width, height, videoFrame->linesize[0]);
 
-    int chromaBLength = std::min(videoFrame->linesize[1], width / 2) * height / 2;
-    uint8_t * chromaB = new uint8_t[chromaBLength];
-    copyFrameData(chromaB, videoFrame->data[1], width/2, height/2, videoFrame->linesize[1]);
-    yuvFrame->chromaB = chromaB;
+    int chromaBLength = height / 2 * std::min(videoFrame->linesize[1], width / 2);
+    yuvFrame->chromaB = new uint8_t[chromaBLength];
+    copyFrameData(yuvFrame->chromaB, videoFrame->data[1], width/2, height/2, videoFrame->linesize[1]);
 
-    int chromaRLength = std::min(videoFrame->linesize[2], width / 2) * height / 2;
-    uint8_t * chromaR = new uint8_t[chromaRLength];
-    copyFrameData(chromaR, videoFrame->data[2], width/2, height/2, videoFrame->linesize[2]);
-    yuvFrame->chromaR = chromaR;
+    int chromaRLength = height / 2 * std::min(videoFrame->linesize[2], width /2);
+    yuvFrame->chromaR = new uint8_t[chromaRLength];
+    copyFrameData(yuvFrame->chromaR, videoFrame->data[2], width/2, height/2, videoFrame->linesize[2]);
 
     LOGE("size %d x %d, linesize %d  %d  %d", width, height, videoFrame->linesize[0], videoFrame->linesize[1], videoFrame->linesize[2]);
     LOGE("lumaLen %d chromaB %d chromaR %d", lumaLength, chromaBLength, chromaRLength);
@@ -194,11 +203,6 @@ void MediaDecoder::copyFrameData(uint8_t * dst, uint8_t * src, int width, int he
 }
 
 void MediaDecoder::release() {
-    if (packet) {
-        av_free_packet(packet);
-        av_free(packet);
-        packet = NULL;
-    }
     if (mVideoFrame) {
         av_frame_free(&mVideoFrame);
         mVideoFrame = NULL;
@@ -209,6 +213,7 @@ void MediaDecoder::release() {
         mVideoCodecContext = NULL;
     }
     if (mformatContext) {
+        avformat_close_input(&mformatContext);
         avformat_free_context(mformatContext);
         mformatContext = NULL;
     }

@@ -29,7 +29,15 @@ namespace GlShaderSource {
     );
 
     //https://blog.csdn.net/lidec/article/details/73732369
-    const static char * VERTEX_YUV_SOURC = VERTEX_BASE_SOURCE;
+    const static char * VERTEX_YUV_SOURCE = GET_STR(
+            attribute vec4 position;
+            attribute vec2 texcoord;
+            varying vec2 v_texcoord;
+            void main() {
+                gl_Position = position;
+                v_texcoord = texcoord;
+            }
+    );
 
     const static char * FRAGMENT_YUV_SOURCE = GET_STR(
             precision mediump float;

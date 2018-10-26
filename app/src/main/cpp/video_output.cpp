@@ -10,6 +10,20 @@ extern "C" {
 #include <unistd.h>
 }
 
+int SaveYuv(unsigned char *buf, int width, int height, char *filename)
+{
+    FILE *f;
+    int i;
+
+    f = fopen(filename, "ab+");
+    for (i = 0; i < height; i++)
+    {
+        fwrite(buf + i * width, 1, width, f);
+    }
+    fclose(f);
+    return 1;
+}
+
 VideoOutput::VideoOutput() {
     mNativeWindow = NULL;
     mSurface = EGL_NO_SURFACE;
@@ -68,6 +82,11 @@ void VideoOutput::createRenderHandlerThread() {
 
 void VideoOutput::output(VideoFrame* frame) {
     postMessage(Message(MESSAGE_RENDER, frame));
+    char * mPath = "/storage/emulated/0/meida.yuv";
+    SaveYuv(frame->luma, frame->frameWidth, frame->frameHeight, mPath);
+    SaveYuv(frame->chromaB, frame->frameWidth/2, frame->frameHeight/2, mPath);
+    SaveYuv(frame->chromaR, frame->frameWidth/2, frame->frameHeight/2, mPath);
+
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
@@ -173,8 +192,8 @@ void VideoOutput::renderTextureHandler(VideoFrame* videoFrame) {
     LOGE("VideoOutput 屏幕尺寸 %d x %d", screenWidth, screenHeight);
     if (videoFrame != NULL) {
         mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-//        mGlRender.onDraw(videoFrame);
-        mGlRender.onDraw();
+//        mGlRender.onDraw();
+        mGlRender.onDraw(videoFrame);
         mEglCore.swapBuffers(mSurface);
 //        // 删除textureId
 //        GlRenderUtil::deleteTexture(textureFrame->textureId);

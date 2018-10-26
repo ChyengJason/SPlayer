@@ -33,7 +33,6 @@ private:
     bool init(const char* path);
     bool initVideoCodec();
     bool initVideoFrameAndSwsContext();
-    void initPacket();
     bool getMediaInfo(const char* path);
     void release();
     VideoFrame *createVideoFrame(double timestamp , double duration, AVFrame *videoFrame);
@@ -44,8 +43,6 @@ private:
     AVFormatContext *mformatContext;
     AVCodecContext *mVideoCodecContext;
     AVCodec *mVideoCodec;
-    AVPacket*packet;
-
     // 视频相关
     int mVideoStreamIndex;
     AVFrame *mVideoFrame;

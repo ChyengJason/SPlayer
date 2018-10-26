@@ -45,6 +45,7 @@ GlYuvRender::~GlYuvRender() {
 void GlYuvRender::onCreated() {
     LOGE("GlYuvRender onCreated");
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
+    GlRenderUtil::useProgram(program);
     vexPositionHandle = glGetAttribLocation(program, "position");
     fragCoordHandle = glGetAttribLocation(program, "texcoord");
     textureYHandle = glGetUniformLocation(program, "texture_y");
@@ -74,7 +75,7 @@ void GlYuvRender::onDestroy() {
 }
 
 int GlYuvRender::loadVertexShader() {
-    int shader = GlRenderUtil::loadShader(GL_VERTEX_SHADER, GlShaderSource::VERTEX_YUV_SOURC);
+    int shader = GlRenderUtil::loadShader(GL_VERTEX_SHADER, GlShaderSource::VERTEX_YUV_SOURCE);
     return shader;
 }
 
@@ -87,7 +88,7 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
     LOGE("GlYuvRender::onDraw");
     GlRenderUtil::useProgram(program);
     glViewport(0, 0, frameWidth, frameHeight);
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(1.0f, 1.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnableVertexAttribArray(vexPositionHandle);
@@ -98,18 +99,27 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
     glVertexAttribPointer(fragCoordHandle, CoordsPerTextureCount, GL_FLOAT, false, 0, TextureCoordData);
 
     //绑定纹理
-    bindTexture(GL_TEXTURE0, textureY, videoFrame->frameWidth, videoFrame->frameHeight, videoFrame->luma);
-    glUniform1i(textureYHandle, 0); //对应纹理第1层
-    bindTexture(GL_TEXTURE1, textureU, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaB);
-    glUniform1i(textureUHandle, 1); //对应纹理第2层
-    bindTexture(GL_TEXTURE2, textureV, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaR);
-    glUniform1i(textureVHandle, 2); //对应纹理第3层
-//    bindTexture(GL_TEXTURE0, textureY, frameWidth, frameHeight, videoFrame->luma);
-//    bindTexture(GL_TEXTURE1, textureU, frameWidth / 2, frameHeight / 2, videoFrame->chromaB);
-//    bindTexture(GL_TEXTURE2, textureV, frameWidth / 2, frameHeight / 2, videoFrame->chromaR);
+//    bindTexture(GL_TEXTURE0, textureY, videoFrame->frameWidth, videoFrame->frameHeight, videoFrame->luma);
+//    glUniform1i(textureYHandle, 0); //对应纹理第2层
+//    bindTexture(GL_TEXTURE1, textureU, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaB);
+//    glUniform1i(textureUHandle, 1); //对应纹理第2层
+//    bindTexture(GL_TEXTURE2, textureV, videoFrame->frameWidth / 2, videoFrame->frameHeight / 2, videoFrame->chromaR);
+//    glUniform1i(textureVHandle, 2); //对应纹理第3层
 
-    //片元中uniform 2维均匀变量赋值
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureY);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth, videoFrame->frameHeight, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->luma);
+    glUniform1i(textureYHandle, 0);
 
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textureU);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaB);
+    glUniform1i(textureUHandle, 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, textureV);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaR);
+    glUniform1i(textureVHandle, 2);
 
     // 绘制 GLES30.GL_TRIANGLE_STRIP: 复用坐标
     glDrawArrays(GL_TRIANGLE_STRIP, 0, VertexCount);
@@ -122,12 +132,11 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
 void GlYuvRender::bindTexture(int glTexture, int textureHandle, int width, int height, void *buffer) {
     LOGE("bindTexture %d x %d", width, height);
     glActiveTexture(glTexture);
-//    if (width % 4 != 0) {
-//        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-//    }
+    if (width % 16 != 0) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    }
     glBindTexture(GL_TEXTURE_2D, textureHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, buffer);
-//    glBindTexture(GL_TEXTURE_2D, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, buffer);
 }
 
 void GlYuvRender::freeTextures() {

@@ -59,7 +59,7 @@ private:
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlTriangerRender mGlRender;
+    GlYuvRender mGlRender;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;
