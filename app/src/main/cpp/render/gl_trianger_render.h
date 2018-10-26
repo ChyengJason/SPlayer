@@ -22,7 +22,6 @@ private:
 private:
     int program;
     GLuint vexPositionHandle;
-    GLuint colorHandle;
 };
 
 #endif //SPLAYER_GL_TRIANGER_RENDER_H
