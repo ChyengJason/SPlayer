@@ -12,20 +12,17 @@
 #include "render/gl_yuv_render.h"
 #include <queue>
 
-enum MsgType {
+enum VideoOutputMessageType {
     MESSAGE_CREATE_CONTEXT,
-    MESSAGE_CREATE_SURFACE,
-    MESSAGE_UPDATE_SURFACE,
-    MESSAGE_DESTROY_SURFACE,
     MESSAGE_QUIT,
     MESSAGE_RENDER,
     MESSAGE_CHANGE_SIZE
 };
 
-struct Message {
-    Message(MsgType type) : msgType(type), value(0) {}
-    Message(MsgType type, void* val) : msgType(type), value(val) {}
-    MsgType msgType;
+struct VideoOutputMessage {
+    VideoOutputMessage(VideoOutputMessageType type) : msgType(type), value(0) {}
+    VideoOutputMessage(VideoOutputMessageType type, void* val) : msgType(type), value(val) {}
+    VideoOutputMessageType msgType;
     void* value;
 };
 
@@ -33,25 +30,20 @@ class VideoOutput{
 public:
     VideoOutput();
     ~VideoOutput();
-    void start();
-    void finish();
     void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
     void output(void *frame);
-    bool postMessage(Message msg);
+    bool postMessage(VideoOutputMessage msg);
     bool isSurfaceValid();
 
 private:
-    void createEglContextHandler();
+    void createContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
     void renderTextureHandler(void *frame);
     void changeSizeHanlder();
     void processMessages();
-    void createSurfaceHandler();
-    void updateSurfaceHandler();
-    void destroySurfaceHandler();
     static void* renderHandlerThread(void* self);
 
 private:
@@ -64,7 +56,7 @@ private:
     pthread_t mRenderHandlerThread;
     pthread_mutex_t mRenderHandlerMutex;
     pthread_cond_t mRenderHandlerCond;
-    std::queue<Message> mHandlerMessageQueue;
+    std::queue<VideoOutputMessage> mHandlerMessageQueue;
     bool isThreadInited;
 };
 

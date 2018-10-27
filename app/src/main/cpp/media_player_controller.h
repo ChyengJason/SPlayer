@@ -10,14 +10,6 @@
 #include "media_synchronizer.h"
 #include "audio_output.h"
 
-enum MediaStatus {
-    UNINITED,
-    STOP,
-    PLAY,
-    PAUSE,
-    SUSPEND
-};
-
 class MediaPlayerController {
 public:
     MediaPlayerController();
@@ -45,7 +37,6 @@ private:
     MediaDecoder *mMediaDecoder;
     VideoQueue *mVieoQue;
 //    AudioOutput *mAudioOutput;
-//    MediaStatus mStatus;
 };
 
 

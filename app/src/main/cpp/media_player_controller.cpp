@@ -14,7 +14,6 @@ MediaPlayerController::MediaPlayerController() {
     mVieoQue = new VideoQueue;
 //    mAudioOutput = new AudioOutput;
     instance = this;
-//    mStatus = UNINITED;
 }
 
 MediaPlayerController::~MediaPlayerController() {
@@ -22,38 +21,13 @@ MediaPlayerController::~MediaPlayerController() {
 }
 
 void MediaPlayerController::start(const char *path) {
-//    if (mStatus != UNINITED) {
-//        LOGE("start -> MediaPlayerController is not uninited %d", mStatus);
-//        return;
-//    }
-//    mSynchronizer->prepare(path);
-//    mSynchronizer->start();
-//    int channelCount = mSynchronizer->getChannelCount();
-//    int samplerate = mSynchronizer->getSamplerate();
-//    mAudioOutput->start(channelCount, samplerate, getAudioFrame);
-//    mStatus = PLAY;
-//    if (!mVideoOutput->isSurfaceValid()) {
-//        pause();
-//    }
-//    int count = 0;
-//    while (mStatus == PLAY) {
-//        TextureFrame* textureFrame = getTextureFrame();
-//        if ( textureFrame != NULL) {
-//            LOGE("controller output textureFrame %d", textureFrame->textureId);
-//            mVideoOutput->output(textureFrame);
-//        }
-//        if (count++ > 3) {
-//            break;
-//        }
-//    }
-    mMediaDecoder->prepare(path);
-    mVideoOutput->start();
-    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
+    LOGE("start %s", path);
     int count = 0;
+    mMediaDecoder->prepare(path);
+    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
     TextureFrame* textureFrame = NULL;
-    while(true) {
+    while(count <= 50 ) {
         AVPacket* packet = mMediaDecoder->readFrame();
-        LOGE("readFrame finish");
         if (mMediaDecoder->isVideoPacket(packet)) {
             count++;
             std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
@@ -64,56 +38,22 @@ void MediaPlayerController::start(const char *path) {
                 delete(textureFrame);
             }
         }
-        if (count > 50) {
-            break;
-        }
     }
 }
 
 void MediaPlayerController::stop() {
-//    if (mStatus == STOP || mStatus == UNINITED) {
-//        LOGE("stop -> MediaPlayerController is stopped or uninited %d", mStatus);
-//        return;
-//    }
-//    mSynchronizer->finish();
-//    mVideoOutput->onDestroy();
-//    mAudioOutput->stop();
-//    mStatus = STOP;
-//    release();
 }
 
 void MediaPlayerController::pause() {
-//    if (mStatus != PLAY) {
-//        LOGE("pause -> MediaPlayerController is not playing %d", mStatus);
-//        return;
-//    }
-//    mStatus = PAUSE;
-//    mAudioOutput->pause();
 }
 
 void MediaPlayerController::seek(double position) {
-//    if (mStatus != PLAY && mStatus != PAUSE) {
-//        LOGE("seek -> MediaPlayerController is not playing or paused %d", mStatus);
-//        return;
-//    }
 }
 
 void MediaPlayerController::suspend() {
-//    if (mStatus != PLAY) {
-//        LOGE("suspend -> MediaPlayerController is not playing %d", mStatus);
-//        return;
-//    }
-//    mStatus = SUSPEND;
-//    mAudioOutput->pause();
 }
 
 void MediaPlayerController::resume() {
-//    if ( mStatus != PAUSE && mStatus != SUSPEND) {
-//        LOGE("resume -> MediaPlayerController is not paused or suspend %d", mStatus);
-//        return;
-//    }
-//    mStatus = PLAY;
-//    mAudioOutput->resume();
 }
 
 long MediaPlayerController::getDuration() {
@@ -127,14 +67,7 @@ long MediaPlayerController::getProgress() {
 }
 
 void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {
-//    if (mStatus == UNINITED) {
-        mVideoOutput->onCreated(window);
-//    } else {
-//        mVideoOutput->onUpdated(window);
-//    }
-//    if (mStatus == SUSPEND) {
-//        resume();
-//    }
+    mVideoOutput->onCreated(window);
 }
 
 void MediaPlayerController::onSurfaceSizeChanged(int screenWidth, int screenHeight) {
@@ -143,10 +76,8 @@ void MediaPlayerController::onSurfaceSizeChanged(int screenWidth, int screenHeig
 
 void MediaPlayerController::onSurfaceDestroy() {
     mVideoOutput->onDestroy();
-//    LOGE("MediaPlayerController onSurfaceDestroy status %d", mStatus);
-//    if (mStatus == PLAY) {
-//        suspend();
-//    }
+    mMediaDecoder->finish();
+    mVieoQue->finish();
 }
 
 void MediaPlayerController::release() {

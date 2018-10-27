@@ -24,6 +24,12 @@ bool MediaDecoder::prepare(const char* path) {
     mSwrContext = NULL;
     mAudioOutBuffer = NULL;
     mAudioOutBufferSize = 0;
+    mVideoStreamIndex = -1;
+    mAudioStreamIndex = -1;
+    mOutChannels = 0;
+    mOutSampleRate = 0;
+    mOutChannelLayout = 0;
+
     return init(path);
 }
 
@@ -211,7 +217,7 @@ AVPacket* MediaDecoder::readFrame() {
 }
 
 std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
-    LOGE("decodeVideoFrame");
+    LOGE("MediaDecoder decodeVideoFrame");
     std::vector<VideoFrame*> vec;
     if (packet == NULL || packet->stream_index != mVideoStreamIndex) {
         return vec;
@@ -222,6 +228,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     double timestamp;
     double duration;
     int pktSize = packet->size;
+    LOGE("MediaDecoder pktSize %d", pktSize);
     while (pktSize > 0) {
         LOGE("开始解码视频帧");
         // 解码图像数据：RGBA格式保存在data[0] ，YUV格式有data[0] data[1] data[2]
@@ -250,8 +257,8 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
             break;
         }
         pktSize -= len;
+        av_free_packet(packet);
     }
-    av_free_packet(packet);
     LOGE("解码完成");
     return vec;
 }
@@ -360,6 +367,15 @@ void MediaDecoder::copyFrameData(uint8_t * dst, uint8_t * src, int width, int he
 }
 
 void MediaDecoder::release() {
+    LOGE("MediaDecoder::release");
+    if (mAudioStreamIndex != -1) {
+        delete mformatContext->streams[mAudioStreamIndex];
+        mAudioStreamIndex = -1;
+    }
+    if (mVideoStreamIndex != -1) {
+        delete mformatContext->streams[mVideoStreamIndex];
+        mVideoStreamIndex = -1;
+    }
     if (packet) {
         av_free_packet(packet);
         delete packet;
@@ -383,7 +399,7 @@ void MediaDecoder::release() {
         mSwsContext = NULL;
     }
     if (mVideoOutBuffer) {
-        av_free(mVideoOutBuffer);
+        delete mAudioOutBuffer;
         mVideoOutBuffer = NULL;
     }
     if (mSwrContext) {
@@ -403,9 +419,11 @@ void MediaDecoder::release() {
         mVideoCodecContext = NULL;
     }
     if (mformatContext) {
+        avformat_close_input(&mformatContext);
         avformat_free_context(mformatContext);
         mformatContext = NULL;
     }
+    LOGE("MediaDecoder::release finish");
 }
 
 int MediaDecoder::getSamplerate() {

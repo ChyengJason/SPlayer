@@ -11,40 +11,56 @@
 #include "render/gl_base_render.h"
 #include "render/gl_yuv_render.h"
 
+enum VideoQueueMessageType {
+    VIDEOQUEUE_MESSAGE_CREATE,
+    VIDEOQUEUE_MESSAGE_QUIT,
+    VIDEOQUEUE_MESSAGE_PUSH,
+    VIDEOQUEUE_MESSAGE_CLEAR
+};
+
+struct VideoQueueMessage {
+    VideoQueueMessage(VideoQueueMessageType type) : msgType(type), value(0) {}
+    VideoQueueMessage(VideoQueueMessageType type, void* val) : msgType(type), value(val) {}
+    VideoQueueMessageType msgType;
+    void* value;
+};
+
 class VideoQueue {
 public:
     VideoQueue();
     ~VideoQueue();
-    void release();
     void push(std::vector<VideoFrame*> frames);
     TextureFrame* pop();
     bool isEmpty();
     void clear();
     int size();
     void start(int width, int height);
+    void finish();
 
 private:
+    void postMessage(VideoQueueMessage msg);
+    void postMessage(std::vector<VideoQueueMessage> msgs);
     void createRenderThread();
     static void* runRender(void *self);
-    void signalRender();
-    void createRender();
-    void processRender();
-    void createFboRender();
-    void destroyRender();
-    TextureFrame *textureRender(const VideoFrame *pFrame);
+    void processMessages();
+    void createHandler();
+    void releaseHandler();
+    void renderHandler(void *Frame);
+    void clearHandler();
 
 private:
-    pthread_mutex_t mVideoFrameMutex;
+    pthread_mutex_t mRenderMutex;
     pthread_mutex_t mTextureFrameMutex;
     pthread_cond_t mRenderCond;
     pthread_t mRenderThread;
-    std::queue<VideoFrame*> mVideoFrameQue;
-    std::queue<TextureFrame*> mTextureFrameQue;
-    bool isCreateRendered;
-    bool isRunning;
 
+    std::queue<VideoQueueMessage> mHandlerMessageQueue;
+    std::queue<TextureFrame*> mTextureFrameQue;
+
+    bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;
+    EGLContext mContext;
     EGLSurface mPbufferSurface;
     int frameWidth;
     int frameHeight;

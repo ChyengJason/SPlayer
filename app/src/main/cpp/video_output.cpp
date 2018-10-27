@@ -21,25 +21,14 @@ VideoOutput::~VideoOutput() {
     pthread_mutex_destroy(&mRenderHandlerMutex);
 }
 
-void VideoOutput::start() {
-    LOGE("当前主线程：%lu", (unsigned long)pthread_self());
-    createRenderHandlerThread();
-    isThreadInited = true;
-    postMessage(MESSAGE_CREATE_CONTEXT);
-}
-
-void VideoOutput::finish() {
-    postMessage(MESSAGE_QUIT);
-    isThreadInited = false;
-}
-
 void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
     if (!isThreadInited) {
-        start();
+        isThreadInited = true;
+        LOGE("VideoOutput onCreated 当前主线程：%lu", (unsigned long)pthread_self());
+        createRenderHandlerThread();
+        mNativeWindow = nativeWindow;
+        postMessage(MESSAGE_CREATE_CONTEXT);
     }
-    mNativeWindow = nativeWindow;
-    mSurface = EGL_NO_SURFACE;
-    postMessage(MESSAGE_CREATE_SURFACE);
 }
 
 void VideoOutput::onChangeSize(int screenWidth, int screenHeight) {
@@ -55,7 +44,9 @@ void VideoOutput::onDestroy() {
     if (!isThreadInited) {
         return;
     }
-    postMessage(MESSAGE_DESTROY_SURFACE);
+    isThreadInited = false;
+    postMessage(MESSAGE_QUIT);
+    pthread_detach(mRenderHandlerThread);
 }
 
 void VideoOutput::createRenderHandlerThread() {
@@ -68,11 +59,14 @@ void VideoOutput::createRenderHandlerThread() {
 }
 
 void VideoOutput::output(void* frame) {
-    postMessage(Message(MESSAGE_RENDER, frame));
+    if (!isThreadInited) {
+        return;
+    }
+    postMessage(VideoOutputMessage(MESSAGE_RENDER, frame));
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
-    LOGE("当前Handler线程：%lu", (unsigned long)pthread_self());
+    LOGE("VideoOutput 当前Handler线程：%lu", (unsigned long)pthread_self());
     VideoOutput* mOutput = (VideoOutput*) self;
     // handler处理消息
     mOutput->processMessages();
@@ -80,7 +74,7 @@ void *VideoOutput::renderHandlerThread(void *self) {
     return NULL;
 }
 
-bool VideoOutput::postMessage(Message msg) {
+bool VideoOutput::postMessage(VideoOutputMessage msg) {
     int lockCode = pthread_mutex_lock(&mRenderHandlerMutex);
     if (lockCode != 0) {
         return false;
@@ -90,6 +84,7 @@ bool VideoOutput::postMessage(Message msg) {
     pthread_mutex_unlock(&mRenderHandlerMutex);
     return true;
 }
+
 void VideoOutput::processMessages() {
     bool isQuited = true;
     while (isQuited) {
@@ -105,21 +100,12 @@ void VideoOutput::processMessages() {
             pthread_mutex_unlock(&mRenderHandlerMutex);
             continue;
         }
-        Message msg = mHandlerMessageQueue.front();
+        VideoOutputMessage msg = mHandlerMessageQueue.front();
         mHandlerMessageQueue.pop();
         LOGE("VideoOutput MESSAGE %d", msg.msgType);
         switch (msg.msgType) {
             case MESSAGE_CREATE_CONTEXT:
-                createEglContextHandler();
-                break;
-            case MESSAGE_CREATE_SURFACE:
-                createSurfaceHandler();
-                break;
-            case MESSAGE_UPDATE_SURFACE:
-                updateSurfaceHandler();
-                break;
-            case MESSAGE_DESTROY_SURFACE:
-                destroySurfaceHandler();
+                createContextHandler();
                 break;
             case MESSAGE_RENDER:
                 renderTextureHandler(msg.value);
@@ -136,58 +122,50 @@ void VideoOutput::processMessages() {
         }
         pthread_mutex_unlock(&mRenderHandlerMutex);
     }
-    LOGE("processMessages 结束");
+    LOGE("VideoOutput processMessages 结束");
+    pthread_exit(0);
 }
 
-void VideoOutput::createEglContextHandler() {
+void VideoOutput::createContextHandler() {
+    LOGE(" VideoOutput::createEglContextHandler");
     EGLContext context = mEglCore.createGL(EglShareContext::getShareContext());
     EglShareContext::setShareContext(context);
-}
-
-void VideoOutput::createSurfaceHandler() {
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     mGlRender.onCreated();
-}
-
-void VideoOutput::updateSurfaceHandler() {
-    mGlRender.onDestroy();
-    mEglCore.destroySurface(mSurface);
-    mSurface = EGL_NO_SURFACE;
-    mSurface = mEglCore.createWindowSurface(mNativeWindow);
-    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-    mGlRender.onCreated();
-}
-
-void VideoOutput::destroySurfaceHandler() {
-    mGlRender.onDestroy();
-    mEglCore.destroySurface(mSurface);
-    mSurface = EGL_NO_SURFACE;
-    ANativeWindow_release(mNativeWindow);
-    mNativeWindow = NULL;
+    LOGE(" VideoOutput::createEglContextHandler finish");
 }
 
 void VideoOutput::releaseRenderHanlder() {
+    LOGE("VideoOutput destroySurfaceHandler");
+    mGlRender.onDestroy();
+    mEglCore.destroySurface(mSurface);
+    mSurface = EGL_NO_SURFACE;
     mEglCore.destroyGL(EglShareContext::getShareContext());
+    EglShareContext::setShareContext(EGL_NO_CONTEXT);
+    ANativeWindow_release(mNativeWindow);
+    mNativeWindow = NULL;
+
+    while (!mHandlerMessageQueue.empty()) {
+        VideoOutputMessage message = mHandlerMessageQueue.front();
+        mHandlerMessageQueue.pop();
+        if (message.msgType == MESSAGE_RENDER) {
+            delete(message.value);
+        }
+    }
 }
 
 void VideoOutput::renderTextureHandler(void* frame) {
-//    LOGE("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
-//    if (textureFrame->textureId >= 0) {
-//        mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-//        mGlRender.onDraw(textureFrame->textureId);
-//        mEglCore.swapBuffers(mSurface);
-        // 删除textureId
-//        GlRenderUtil::deleteTexture(textureFrame->textureId);
-//        delete(textureFrame);
-//    }
-    LOGE("renderTextureHandler");
+    TextureFrame* textureFrame = (TextureFrame*)frame;
+    LOGE("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
     mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-    mGlRender.onDraw(((TextureFrame*)frame)->textureId);
+    mGlRender.onDraw(textureFrame->textureId);
+    GlRenderUtil::deleteTexture(textureFrame->textureId);
     mEglCore.swapBuffers(mSurface);
 }
 
 void VideoOutput::changeSizeHanlder() {
+    LOGE("VideoOutput changeSizeHanlder");
     mGlRender.onChangeSize(screenWidth, screenHeight);
 }
 

@@ -35,7 +35,7 @@ void MediaSynchronizer::start() {
 void MediaSynchronizer::finish() {
     mMediaDecoder->finish();
     mAudioQue->release();
-    mTextureQue->release();
+    mTextureQue->finish();
     // 停止线程
 }
 
