@@ -21,29 +21,9 @@ MediaPlayerController::~MediaPlayerController() {
 }
 
 void MediaPlayerController::start(const char *path) {
-    LOGE("start %s", path);
-    int count = 0;
-    mMediaDecoder->prepare(path);
-    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
-
-    while(true) {
-        AVPacket* packet = mMediaDecoder->readFrame();
-        if (!mMediaDecoder->isVideoPacket(packet)) {
-            continue;
-        }
-        std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
-        if (frames.empty()) {
-            continue;
-        }
-        mVieoQue->push(frames);
-        usleep(1000 * 1000);
-        if (!mVieoQue->isEmpty()) {
-            mVideoOutput->output(mVieoQue->pop());
-            break;
-        } else {
-            LOGE("mVieoQue->isEmpty");
-        }
-    }
+    mPath = new char[strlen(path)];
+    strcpy(mPath, path);
+    pthread_create(&mThread, NULL, run, this);
 }
 
 void MediaPlayerController::stop() {
@@ -111,4 +91,33 @@ AudioFrame *MediaPlayerController::getAudioFrame() {
 TextureFrame *MediaPlayerController::getTextureFrame() {
 //    return instance->mSynchronizer->getTextureFrame();
     return NULL;
+}
+
+void *MediaPlayerController::run(void *self) {
+    ((MediaPlayerController*)self)->startImp();
+    return 0;
+}
+
+void MediaPlayerController::startImp() {
+    LOGE("start %s", mPath);
+    mMediaDecoder->prepare(mPath);
+    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
+
+    while(true) {
+        AVPacket* packet = mMediaDecoder->readFrame();
+        if (!mMediaDecoder->isVideoPacket(packet)) {
+            continue;
+        }
+        std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
+        if (frames.empty()) {
+            continue;
+        }
+        mVieoQue->push(frames);
+        usleep(1000 * 16);
+        if (!mVieoQue->isEmpty()) {
+            mVideoOutput->output(mVieoQue->pop());
+        } else {
+            LOGE("mVieoQue->isEmpty");
+        }
+    }
 }

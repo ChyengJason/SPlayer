@@ -30,13 +30,16 @@ public:
 private:
     static TextureFrame* getTextureFrame();
     static AudioFrame* getAudioFrame();
-
+    static void* run(void* self);
+    void startImp();
 private:
 //    MediaSynchronizer *mSynchronizer;
     VideoOutput *mVideoOutput;
     MediaDecoder *mMediaDecoder;
     VideoQueue *mVieoQue;
 //    AudioOutput *mAudioOutput;
+    pthread_t mThread;
+    char* mPath;
 };
 
 
