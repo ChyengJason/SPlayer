@@ -56,7 +56,6 @@ private:
 
     SyncQueue<VideoQueueMessage> mHandlerMessageQueue;
     SyncQueue<TextureFrame*> mTextureFrameQue;
-    void pushTextureFrame(TextureFrame* textureFrame);
 
     bool isThreadInited;
     EglCore mEglCore;

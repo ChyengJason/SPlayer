@@ -7,37 +7,11 @@
 
 static MediaPlayerController*instance = NULL;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-
-void pthread_sleep( unsigned int ms )
-{
-    struct timespec deadline;
-    struct timeval now;
-
-    gettimeofday(&now,NULL);
-    time_t seconds = ms/1000;
-    long nanoseconds = (ms - seconds * 1000) * 1000000;
-
-    deadline.tv_sec = now.tv_sec + seconds;
-    deadline.tv_nsec = now.tv_usec * 1000 + nanoseconds;
-
-    if( deadline.tv_nsec >= 1000000000L )
-    {
-        deadline.tv_nsec -= 1000000000L;
-        deadline.tv_sec++;
-    }
-
-    pthread_mutex_lock(&mutex);
-    pthread_cond_timedwait(&cond,&mutex,&deadline);
-    pthread_mutex_unlock(&mutex);
-}
-
 MediaPlayerController::MediaPlayerController() {
 //    mSynchronizer = new MediaSynchronizer;
     mVideoOutput = new VideoOutput;
     mMediaDecoder = new MediaDecoder;
-//    mVieoQue = new VideoQueue;
+    mVieoQue = new VideoQueue;
 //    mAudioOutput = new AudioOutput;
     instance = this;
 }
@@ -50,24 +24,7 @@ void MediaPlayerController::start(const char *path) {
     LOGE("start %s", path);
     int count = 0;
     mMediaDecoder->prepare(path);
-//    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
-//    while(count <= 2 ) {
-//        AVPacket* packet = mMediaDecoder->readFrame();
-//        if (mMediaDecoder->isVideoPacket(packet)) {
-//            std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
-//            if (!frames.empty()) {
-//                count++;
-//                mVieoQue->push(frames);
-//                usleep(1000 * 1000);
-//                if (!mVieoQue->isEmpty()) {
-//                    TextureFrame* textureFrame = mVieoQue->pop();
-//                    mVideoOutput->output(textureFrame);
-//                } else {
-//                    LOGE("mVieoQue isEmpty");
-//                }
-//            }
-//        }
-//    }
+    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
 
     while(true) {
         AVPacket* packet = mMediaDecoder->readFrame();
@@ -78,8 +35,14 @@ void MediaPlayerController::start(const char *path) {
         if (frames.empty()) {
             continue;
         }
-        mVideoOutput->output(frames[0]);
-        pthread_sleep(1000);
+        mVieoQue->push(frames);
+        usleep(1000 * 1000);
+        if (!mVieoQue->isEmpty()) {
+            mVideoOutput->output(mVieoQue->pop());
+            break;
+        } else {
+            LOGE("mVieoQue->isEmpty");
+        }
     }
 }
 

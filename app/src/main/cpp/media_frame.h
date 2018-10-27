@@ -11,9 +11,18 @@ class VideoFrame {
 public:
     VideoFrame():luma(NULL), chromaB(NULL), chromaR(NULL) {}
     ~VideoFrame() {
-        if (luma) delete(luma);
-        if (chromaB) delete(chromaB);
-        if (chromaR) delete(chromaR);
+        if (luma) {
+            LOGE("delete luma");
+            delete (luma);
+        }
+        if (chromaB) {
+            LOGE("delete chromaB");
+            delete (chromaB);
+        }
+        if (chromaR) {
+            LOGE("delete chromaR");
+            delete (chromaR);
+        }
     }
 
 public:

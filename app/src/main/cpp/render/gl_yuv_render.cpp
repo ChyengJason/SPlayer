@@ -107,27 +107,23 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
     glBindTexture(GL_TEXTURE_2D, textureY);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth, videoFrame->frameHeight, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->luma);
     glUniform1i(textureYHandle, 0);
-    glFlush();
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textureU);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaB);
     glUniform1i(textureUHandle, 1);
-//    glFlush();
 
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, textureV);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaR);
     glUniform1i(textureVHandle, 2);
-//    glFlush();
 
     // 绘制 GLES30.GL_TRIANGLE_STRIP: 复用坐标
     glDrawArrays(GL_TRIANGLE_STRIP, 0, VertexCount);
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisableVertexAttribArray(vexPositionHandle);
     glDisableVertexAttribArray(fragCoordHandle);
-//    glFlush();
 
 }
 

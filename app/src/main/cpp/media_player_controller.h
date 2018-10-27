@@ -35,7 +35,7 @@ private:
 //    MediaSynchronizer *mSynchronizer;
     VideoOutput *mVideoOutput;
     MediaDecoder *mMediaDecoder;
-//    VideoQueue *mVieoQue;
+    VideoQueue *mVieoQue;
 //    AudioOutput *mAudioOutput;
 };
 

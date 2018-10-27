@@ -68,10 +68,6 @@ TextureFrame *VideoQueue::pop() {
     return mTextureFrameQue.pop();
 }
 
-void VideoQueue::pushTextureFrame(TextureFrame* textureFrame){
-    mTextureFrameQue.push(textureFrame);
-}
-
 void VideoQueue::clear() {
     postMessage(VIDEOQUEUE_MESSAGE_CLEAR);
 }
@@ -140,6 +136,9 @@ void VideoQueue::createHandler() {
         return;
     }
     mContext = mEglCore.createGL(EglShareContext::getShareContext());
+    LOGE("VideoQueue mContext %d", mContext);
+    LOGE("VideoQueue getShareContext %d", EglShareContext::getShareContext());
+    LOGE("VideoQueue createBufferSurface %dx%d", frameWidth, frameHeight);
     mPbufferSurface = mEglCore.createBufferSurface(frameWidth, frameHeight);
     mEglCore.makeCurrent(mPbufferSurface, mContext);
     mGlRender.onCreated();
@@ -169,6 +168,7 @@ void VideoQueue::renderHandler(void* frame) {
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
     mGlRender.onDraw(videoFrame);
+    mEglCore.swapBuffers(mPbufferSurface);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
     TextureFrame* textureFrame = new TextureFrame;
@@ -177,8 +177,8 @@ void VideoQueue::renderHandler(void* frame) {
     textureFrame->duration = videoFrame->duration;
     textureFrame->timestamp = videoFrame->timestamp;
     textureFrame->textureId = outTexture;
-    pushTextureFrame(textureFrame);
-    //delete videoFrame;
+    mTextureFrameQue.push(textureFrame);
+    delete videoFrame;
 }
 
 void VideoQueue::clearHandler() {

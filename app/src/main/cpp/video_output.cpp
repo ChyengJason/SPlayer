@@ -149,17 +149,13 @@ void VideoOutput::releaseRenderHanlder() {
 }
 
 void VideoOutput::renderTextureHandler(void* frame) {
-    VideoFrame* videoFrame = (VideoFrame*)frame;
-    //LOGE("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
+    TextureFrame* textureFrame = (TextureFrame*)frame;
+    LOGE("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
     mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-    //mGlRender.onDraw(textureFrame->textureId);
-    mGlRender.onDraw(videoFrame);
+    mGlRender.onDraw(textureFrame->textureId);
     mEglCore.swapBuffers(mSurface);
-    LOGE("videoOutput finish render");
-    //usleep(1000 * 500);
-//    delete(videoFrame);
-//    GlRenderUtil::deleteTexture(textureFrame->textureId);
-//    delete textureFrame;
+    GlRenderUtil::deleteTexture(textureFrame->textureId);
+    delete textureFrame;
 }
 
 void VideoOutput::changeSizeHanlder() {
