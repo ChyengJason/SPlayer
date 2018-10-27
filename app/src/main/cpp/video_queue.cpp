@@ -11,24 +11,22 @@ VideoQueue::VideoQueue() {
     isThreadInited = false;
     mContext = EGL_NO_CONTEXT;
     pthread_mutex_init(&mRenderMutex, NULL);
-    pthread_mutex_init(&mTextureFrameMutex, NULL);
     pthread_cond_init(&mRenderCond, NULL);
 }
 
 VideoQueue::~VideoQueue() {
     pthread_detach(mRenderThread);
     pthread_cond_destroy(&mRenderCond);
-    pthread_mutex_destroy(&mTextureFrameMutex);
     pthread_mutex_destroy(&mRenderMutex);
 }
 
 void VideoQueue::start(int width, int height) {
     this->frameWidth = width;
     this->frameHeight = height;
-    isThreadInited = true;
     LOGE("videoqueue start: %d x %d", frameWidth, frameHeight);
     createRenderThread();
     postMessage(VIDEOQUEUE_MESSAGE_CREATE);
+    isThreadInited = true;
 }
 
 void VideoQueue::finish()  {
@@ -39,24 +37,20 @@ void VideoQueue::finish()  {
 }
 
 void VideoQueue::postMessage(VideoQueueMessage msg) {
-    pthread_mutex_lock(&mRenderMutex);
     mHandlerMessageQueue.push(msg);
     pthread_cond_signal(&mRenderCond);
-    pthread_mutex_unlock(&mRenderMutex);
+    LOGE("VideoQueue pthread_cond_signal %d", mHandlerMessageQueue.size());
 }
 
 void VideoQueue::postMessage(std::vector<VideoQueueMessage> msgs) {
-    LOGE("postMessage msgs");
-    pthread_mutex_lock(&mRenderMutex);
-    for (int i = 0; i < msgs.size(); ++i) {
-        mHandlerMessageQueue.push(msgs[i]);
-    }
+    mHandlerMessageQueue.push(msgs);
     pthread_cond_signal(&mRenderCond);
-    pthread_mutex_unlock(&mRenderMutex);
+    LOGE("VideoQueue pthread_cond_signal %d", mHandlerMessageQueue.size());
 }
 
 void VideoQueue::push(std::vector<VideoFrame*> frames) {
-    if (!isThreadInited) {
+    LOGE("VideoQueue pushFrames %d", frames.size());
+    if (!isThreadInited || frames.empty()) {
         return;
     }
     std::vector<VideoQueueMessage> msgs;
@@ -67,18 +61,15 @@ void VideoQueue::push(std::vector<VideoFrame*> frames) {
 }
 
 bool VideoQueue::isEmpty() {
-    return mTextureFrameQue.empty();
+    return mTextureFrameQue.isEmpty();
 }
 
 TextureFrame *VideoQueue::pop() {
-    pthread_mutex_lock(&mTextureFrameMutex);
-    TextureFrame* result = NULL;
-    if(!mTextureFrameQue.empty()) {
-        result = mTextureFrameQue.front();
-        mTextureFrameQue.pop();
-    }
-    pthread_mutex_unlock(&mTextureFrameMutex);
-    return result;
+    return mTextureFrameQue.pop();
+}
+
+void VideoQueue::pushTextureFrame(TextureFrame* textureFrame){
+    mTextureFrameQue.push(textureFrame);
 }
 
 void VideoQueue::clear() {
@@ -110,16 +101,15 @@ void VideoQueue::processMessages() {
             LOGE("VideoQueue processMessages 失败");
             return ;
         }
-        if (mHandlerMessageQueue.empty()) {
+        if (mHandlerMessageQueue.isEmpty()) {
             LOGE("VideoQueue MESSAGE 等待");
             pthread_cond_wait(&mRenderCond, &mRenderMutex);
-            LOGE("VideoQueue MESSAGE 结束唤醒");
+            LOGE("VideoQueue MESSAGE 结束唤醒 %d", mHandlerMessageQueue.size());
             pthread_mutex_unlock(&mRenderMutex);
             continue;
         }
-        VideoQueueMessage msg = mHandlerMessageQueue.front();
-        mHandlerMessageQueue.pop();
-        LOGE("VideoQueue MESSAGE %d", msg.msgType);
+        VideoQueueMessage msg = mHandlerMessageQueue.pop();
+        LOGE("VideoQueue MESSAGE TYPE %d", msg.msgType);
         switch (msg.msgType) {
             case VIDEOQUEUE_MESSAGE_CREATE:
                 createHandler();
@@ -131,7 +121,7 @@ void VideoQueue::processMessages() {
                 clearHandler();
                 break;
             case VIDEOQUEUE_MESSAGE_QUIT:
-                //releaseHandler();
+                releaseHandler();
                 isQuited = false;
                 break;
             default:
@@ -139,14 +129,14 @@ void VideoQueue::processMessages() {
         }
         pthread_mutex_unlock(&mRenderMutex);
     }
-    pthread_exit(0);
     LOGE("VideoQueue processMessages 结束");
+    pthread_exit(0);
 }
 
 void VideoQueue::createHandler() {
     LOGE("videoQueue createHandler");
     if (EglShareContext::getShareContext() == EGL_NO_CONTEXT) {
-        LOGE("EglShareContext::getShareContext() == EGL_NO_CONTEXT error");
+        LOGE("VideoQueue EglShareContext::getShareContext() == EGL_NO_CONTEXT error");
         return;
     }
     mContext = mEglCore.createGL(EglShareContext::getShareContext());
@@ -181,34 +171,27 @@ void VideoQueue::renderHandler(void* frame) {
     mGlRender.onDraw(videoFrame);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
-    delete videoFrame;
     TextureFrame* textureFrame = new TextureFrame;
     textureFrame->screenHeight = videoFrame->frameHeight;
     textureFrame->screenWidth = videoFrame->frameWidth;
     textureFrame->duration = videoFrame->duration;
     textureFrame->timestamp = videoFrame->timestamp;
     textureFrame->textureId = outTexture;
-
-    pthread_mutex_lock(&mTextureFrameMutex);
-    mTextureFrameQue.push(textureFrame);
-    pthread_mutex_unlock(&mTextureFrameMutex);
+    pushTextureFrame(textureFrame);
+    //delete videoFrame;
 }
 
 void VideoQueue::clearHandler() {
     LOGE("VideoQueue::clearHandler");
-    while (!mHandlerMessageQueue.empty()) {
-        VideoQueueMessage message = mHandlerMessageQueue.front();
-        mHandlerMessageQueue.pop();
+    while (!mHandlerMessageQueue.isEmpty()) {
+        VideoQueueMessage message = mHandlerMessageQueue.pop();
         if (message.msgType == VIDEOQUEUE_MESSAGE_PUSH) {
             delete(message.value);
         }
     }
 
-    //pthread_mutex_lock(&mTextureFrameMutex);
-    while(!mTextureFrameQue.empty()) {
-        TextureFrame* textrueFrame = mTextureFrameQue.front();
-        mTextureFrameQue.pop();
+    while(!mTextureFrameQue.isEmpty()) {
+        TextureFrame* textrueFrame = mTextureFrameQue.pop();
         delete(textrueFrame);
     }
-    //pthread_mutex_unlock(&mTextureFrameMutex);
 }

@@ -10,6 +10,7 @@
 #include "egl/egl_core.h"
 #include "render/gl_base_render.h"
 #include "render/gl_yuv_render.h"
+#include "sync_queue.h"
 #include <queue>
 
 enum VideoOutputMessageType {
@@ -34,7 +35,7 @@ public:
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
     void output(void *frame);
-    bool postMessage(VideoOutputMessage msg);
+    void postMessage(VideoOutputMessage msg);
     bool isSurfaceValid();
 
 private:
@@ -45,18 +46,17 @@ private:
     void changeSizeHanlder();
     void processMessages();
     static void* renderHandlerThread(void* self);
-
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlBaseRender mGlRender;
+    GlYuvRender mGlRender;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;
     pthread_t mRenderHandlerThread;
-    pthread_mutex_t mRenderHandlerMutex;
-    pthread_cond_t mRenderHandlerCond;
-    std::queue<VideoOutputMessage> mHandlerMessageQueue;
+    pthread_mutex_t mRenderMutex;
+    pthread_cond_t mRenderCond;
+    SyncQueue<VideoOutputMessage> mMessageQueue;
     bool isThreadInited;
 };
 

@@ -220,6 +220,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     LOGE("MediaDecoder decodeVideoFrame");
     std::vector<VideoFrame*> vec;
     if (packet == NULL || packet->stream_index != mVideoStreamIndex) {
+        LOGE("不是視頻幀或者是空");
         return vec;
     }
 
@@ -259,7 +260,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
         pktSize -= len;
         av_free_packet(packet);
     }
-    LOGE("解码完成");
+    LOGE("解码完成 %d", vec.size());
     return vec;
 }
 
@@ -330,7 +331,6 @@ AudioFrame *MediaDecoder::createAudioFrame(double timestamp , double duration, i
 }
 
 VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, AVFrame *videoFrame) {
-    LOGE("createVideoFrame");
     VideoFrame* yuvFrame = new VideoFrame;
     yuvFrame->frameWidth = mVideoCodecContext->width;
     yuvFrame->frameHeight = mVideoCodecContext->height;
