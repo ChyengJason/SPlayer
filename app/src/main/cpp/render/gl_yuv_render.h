@@ -20,7 +20,6 @@ private:
     int loadVertexShader();
     int loadFragmentShader();
     void createVertexBufferObjects();
-    void bindTexture(int glTexture, int textureHandle, int width, int height, void*buffer);
     void freeTextures();
 
 private:

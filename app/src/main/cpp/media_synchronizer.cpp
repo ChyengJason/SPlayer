@@ -57,8 +57,8 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
     while ((packet = videoDecoder->readFrame()) != NULL && count < 100) {
         if (videoDecoder->isVideoPacket(packet)) {
             LOGD("解码视频帧 %d", ++count);
-            VideoFrame* frame = videoDecoder->decodeVideoFrame(packet);
-            synchronizer->mTextureQue->push(frame);
+            std::vector<VideoFrame*> frames = videoDecoder->decodeVideoFrame(packet);
+            synchronizer->mTextureQue->push(frames);
         } else if (videoDecoder->isAudioPacket(packet)){
 //            LOGD("解码音频帧 NO.%d", ++count);
 //            std::vector<AudioFrame*> frames = videoDecoder->decodeAudioFrame(packet);

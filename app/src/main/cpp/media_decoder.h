@@ -23,7 +23,7 @@ public:
     bool prepare(const char* path);
     void finish();
     AVPacket* readFrame();
-    VideoFrame* decodeVideoFrame(AVPacket*);
+    std::vector<VideoFrame*> decodeVideoFrame(AVPacket*);
     std::vector<AudioFrame*> decodeAudioFrame(AVPacket*);
     int64_t getMediaDuration();
     int getSamplerate();
@@ -42,6 +42,7 @@ private:
     void initPacket();
     bool getMediaInfo(const char* path);
     void release();
+    AVFrame* scaleVideoFrame();
     VideoFrame *createVideoFrame(double timestamp , double duration, AVFrame *videoFrame);
     AudioFrame *createAudioFrame(double timestamp , double duration, int size, uint8_t* data);
     void copyFrameData(uint8_t *dst, uint8_t *src, int width, int height, int linesize);
@@ -53,7 +54,7 @@ private:
     AVCodecContext *mAudioCodecContext;
     AVCodec *mVideoCodec;
     AVCodec *mAudioCodec;
-    AVPacket*packet;
+    AVPacket *packet;
 
     // 音频相关
     int mAudioStreamIndex;

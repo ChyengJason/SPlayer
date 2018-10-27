@@ -16,7 +16,7 @@ public:
     VideoQueue();
     ~VideoQueue();
     void release();
-    void push(VideoFrame * frame);
+    void push(std::vector<VideoFrame*> frames);
     TextureFrame* pop();
     bool isEmpty();
     void clear();

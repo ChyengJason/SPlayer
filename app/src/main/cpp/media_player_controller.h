@@ -40,10 +40,12 @@ private:
     static AudioFrame* getAudioFrame();
 
 private:
-    MediaSynchronizer *mSynchronizer;
+//    MediaSynchronizer *mSynchronizer;
     VideoOutput *mVideoOutput;
-    AudioOutput *mAudioOutput;
-    MediaStatus mStatus;
+    MediaDecoder *mMediaDecoder;
+    VideoQueue *mVieoQue;
+//    AudioOutput *mAudioOutput;
+//    MediaStatus mStatus;
 };
 
 

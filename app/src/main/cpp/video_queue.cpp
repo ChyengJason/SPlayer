@@ -46,9 +46,11 @@ void VideoQueue::release() {
     clear();
 }
 
-void VideoQueue::push(VideoFrame *frame) {
+void VideoQueue::push(std::vector<VideoFrame*> frames) {
     pthread_mutex_lock(&mVideoFrameMutex);
-    mVideoFrameQue.push(frame);
+    for (int i = 0; i < frames.size(); ++i) {
+        mVideoFrameQue.push(frames[i]);
+    }
     pthread_mutex_unlock(&mVideoFrameMutex);
     if (!isCreateRendered) {
         createRenderThread();

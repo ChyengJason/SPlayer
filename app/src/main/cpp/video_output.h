@@ -36,10 +36,9 @@ public:
     void start();
     void finish();
     void onCreated(ANativeWindow *nativeWindow);
-    void onUpdated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    void output(TextureFrame *textureFrame);
+    void output(void *frame);
     bool postMessage(Message msg);
     bool isSurfaceValid();
 
@@ -47,7 +46,7 @@ private:
     void createEglContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
-    void renderTextureHandler(TextureFrame *textureFrame);
+    void renderTextureHandler(void *frame);
     void changeSizeHanlder();
     void processMessages();
     void createSurfaceHandler();
@@ -66,7 +65,7 @@ private:
     pthread_mutex_t mRenderHandlerMutex;
     pthread_cond_t mRenderHandlerCond;
     std::queue<Message> mHandlerMessageQueue;
-    bool isInited;
+    bool isThreadInited;
 };
 
 
