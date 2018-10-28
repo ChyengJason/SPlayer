@@ -10,26 +10,25 @@
 #include "egl/egl_core.h"
 #include "render/gl_base_render.h"
 #include "render/gl_yuv_render.h"
-#include "sync_queue.h"
+#include "util/sync_queue.h"
 #include <queue>
 
-enum VideoOutputMessageType {
+enum VideoOutputMessage{
     MESSAGE_CREATE_CONTEXT,
     MESSAGE_QUIT,
     MESSAGE_RENDER,
     MESSAGE_CHANGE_SIZE
 };
 
-struct VideoOutputMessage {
-    VideoOutputMessage(VideoOutputMessageType type) : msgType(type), value(0) {}
-    VideoOutputMessage(VideoOutputMessageType type, void* val) : msgType(type), value(val) {}
-    VideoOutputMessageType msgType;
-    void* value;
+class IVideoOutput {
+public:
+    virtual ~IVideoOutput() {}
+    virtual TextureFrame* getTetureFrame() = 0;
 };
 
 class VideoOutput{
 public:
-    VideoOutput();
+    VideoOutput(IVideoOutput* callback);
     ~VideoOutput();
     void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
@@ -37,12 +36,13 @@ public:
     void output(void *frame);
     void postMessage(VideoOutputMessage msg);
     bool isSurfaceValid();
+    void signalRenderFrame();
 
 private:
     void createContextHandler();
     void createRenderHandlerThread();
     void releaseRenderHanlder();
-    void renderTextureHandler(void *frame);
+    void renderTextureHandler();
     void changeSizeHanlder();
     void processMessages();
     static void* renderHandlerThread(void* self);
@@ -58,6 +58,7 @@ private:
     pthread_cond_t mRenderCond;
     SyncQueue<VideoOutputMessage> mMessageQueue;
     bool isThreadInited;
+    IVideoOutput* mOutputInterface;
 };
 
 

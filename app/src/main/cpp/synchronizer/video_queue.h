@@ -6,11 +6,11 @@
 #define SPLAYER_VIDEO_QUEUE_H
 
 #include <queue>
-#include "media_frame.h"
-#include "egl/egl_core.h"
-#include "render/gl_base_render.h"
-#include "render/gl_yuv_render.h"
-#include "sync_queue.h"
+#include "../media_frame.h"
+#include "../egl/egl_core.h"
+#include "../render/gl_base_render.h"
+#include "../render/gl_yuv_render.h"
+#include "../util/sync_queue.h"
 
 enum VideoQueueMessageType {
     VIDEOQUEUE_MESSAGE_CREATE,
@@ -37,6 +37,7 @@ public:
     int size();
     void start(int width, int height);
     void finish();
+    bool isRunning();
 
 private:
     void postMessage(VideoQueueMessage msg);

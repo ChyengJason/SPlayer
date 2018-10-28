@@ -4,36 +4,65 @@
 
 #include "audio_output.h"
 
-AudioOutput::AudioOutput() {
+AudioOutput::AudioOutput(IAudioOutput *callback) {
+    mOutputInterface = callback;
+    mData = NULL;
+    mDataSize = 0;
 }
 
 AudioOutput::~AudioOutput() {
+    mOutputInterface = NULL;
+    if(mDataSize != 0) {
+        delete(mData);
+        mData = NULL;
+        mDataSize = 0;
+    }
 }
 
-bool AudioOutput::start(int channel, int samplerate, GetAudioFrameCallback callback) {
+void AudioOutput::start(int channel, int samplerate) {
     curPresentTime = 0;
-    mGetAudioCallback = callback;
     AudioPlayer::create(samplerate, channel);
-    AudioPlayer::play();
-    return true;
 }
 
-void AudioOutput::stop() {
-    release();
+
+void AudioOutput::finish() {
+    AudioPlayer::release();
+    if(mDataSize != 0) {
+        delete(mData);
+        mData = NULL;
+        mDataSize = 0;
+    }
 }
 
 bool AudioOutput::pause() {
     return AudioPlayer::pause();
 }
 
-bool AudioOutput::resume() {
-    return AudioPlayer::play();
-}
-
-bool AudioOutput::getAudioFrameCallback(AudioFrame **copyFrame) {
-    AudioFrame* audioFrame = mGetAudioCallback();
+bool AudioOutput::getAudioDataCallback(char **data, int *size) {
+    AudioFrame* audioFrame = mOutputInterface->getAudioFrame();
     if (audioFrame == NULL || audioFrame->size <= 0)
         return false;
-    *copyFrame = audioFrame;
+    copyAudioFrame(audioFrame);
+    *data = mData;
+    *size = mDataSize;
     return true;
+}
+
+void AudioOutput::signalRenderFrame() {
+    if (!AudioPlayer::isRunning()) {
+        AudioPlayer::play();
+    }
+}
+
+void AudioOutput::copyAudioFrame(AudioFrame *pFrame) {
+//    if (mDataSize != 0) {
+//        delete(mData);
+//        mDataSize = 0;
+//    }
+//    mDataSize = pFrame->size;
+//    mData = new char[mDataSize];
+//    memcmp(mData, pFrame->data, mDataSize);
+//    delete pFrame;
+    mDataSize = pFrame->size;
+    mData = pFrame->data;
 }

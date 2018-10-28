@@ -3,7 +3,7 @@
 //
 
 #include "gl_render_util.h"
-#include "../android_log.h"
+#include "../util/android_log.h"
 
 GLuint GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
     int program = glCreateProgram();

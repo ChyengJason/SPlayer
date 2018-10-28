@@ -6,7 +6,6 @@
 #define SPLAYER_AUDIO_PLAYER_H
 
 #include <string>
-#include "../media_frame.h"
 
 extern "C" {
 #include <SLES/OpenSLES.h>
@@ -16,16 +15,16 @@ extern "C" {
 class AudioPlayer {
 public:
     AudioPlayer();
-    ~AudioPlayer();
+    virtual ~AudioPlayer();
     void create(size_t samplerate, size_t channelCount);
     void release(); // 释放
     bool pause();
     bool play();
     bool setVolume(int level);
-    int getBufferSize();
+    bool isRunning();
 
 protected:
-    virtual bool getAudioFrameCallback(AudioFrame** ) = 0;
+    virtual bool getAudioDataCallback(char** data, int* size) = 0;
 
 private:
     bool createEngine(); // 创建引擎
@@ -42,6 +41,7 @@ private:
     SLPlayItf mPlayer; // 播放器接口
     SLVolumeItf mVolume; // 音量
     SLAndroidSimpleBufferQueueItf  mBufferQueueInterface;// 缓冲区队列接口
+    bool isPlaying;
 };
 
 #endif //SPLAYER_AUDIO_PLAYER_H

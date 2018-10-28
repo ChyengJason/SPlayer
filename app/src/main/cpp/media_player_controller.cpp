@@ -8,11 +8,7 @@
 static MediaPlayerController*instance = NULL;
 
 MediaPlayerController::MediaPlayerController() {
-//    mSynchronizer = new MediaSynchronizer;
-    mVideoOutput = new VideoOutput;
-    mMediaDecoder = new MediaDecoder;
-    mVieoQue = new VideoQueue;
-//    mAudioOutput = new AudioOutput;
+    mSynchronizer = new MediaSynchronizer;
     instance = this;
 }
 
@@ -21,9 +17,8 @@ MediaPlayerController::~MediaPlayerController() {
 }
 
 void MediaPlayerController::start(const char *path) {
-    mPath = new char[strlen(path)];
-    strcpy(mPath, path);
-    pthread_create(&mThread, NULL, run, this);
+    mSynchronizer->prepare(path);
+    mSynchronizer->start();
 }
 
 void MediaPlayerController::stop() {
@@ -42,82 +37,31 @@ void MediaPlayerController::resume() {
 }
 
 long MediaPlayerController::getDuration() {
-//    return mSynchronizer->getDuration();
-    return 0;
+    return mSynchronizer->getDuration();
 }
 
 long MediaPlayerController::getProgress() {
-//    return mSynchronizer->getProgress();
-    return 0;
+    return mSynchronizer->getProgress();
 }
 
 void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {
-    mVideoOutput->onCreated(window);
+    mSynchronizer->onSurfaceCreated(window);
 }
 
 void MediaPlayerController::onSurfaceSizeChanged(int screenWidth, int screenHeight) {
-    mVideoOutput->onChangeSize(screenWidth, screenHeight);
+    mSynchronizer->onSurfaceSizeChanged(screenWidth, screenHeight);
 }
 
 void MediaPlayerController::onSurfaceDestroy() {
-    mVideoOutput->onDestroy();
-//    mMediaDecoder->finish();
-//    mVieoQue->finish();
+    mSynchronizer->onSurfaceDestroy();
 }
 
 void MediaPlayerController::release() {
-//    if (mSynchronizer != NULL) {
-//        delete mSynchronizer;
-//        mSynchronizer = NULL;
-//    }
-    if (mVideoOutput != NULL) {
-        delete mVideoOutput;
-        mVideoOutput = NULL;
+    if (mSynchronizer != NULL) {
+        delete mSynchronizer;
+        mSynchronizer = NULL;
     }
-//    if (mAudioOutput != NULL) {
-//        delete mAudioOutput;
-//        mAudioOutput = NULL;
-//    }
     if (instance != NULL) {
         instance = NULL;
-    }
-}
-
-AudioFrame *MediaPlayerController::getAudioFrame() {
-//    return instance->mSynchronizer->getAudioFrame();
-    return NULL;
-}
-
-TextureFrame *MediaPlayerController::getTextureFrame() {
-//    return instance->mSynchronizer->getTextureFrame();
-    return NULL;
-}
-
-void *MediaPlayerController::run(void *self) {
-    ((MediaPlayerController*)self)->startImp();
-    return 0;
-}
-
-void MediaPlayerController::startImp() {
-    LOGE("start %s", mPath);
-    mMediaDecoder->prepare(mPath);
-    mVieoQue->start(mMediaDecoder->getWidth(), mMediaDecoder->getHeight());
-
-    while(true) {
-        AVPacket* packet = mMediaDecoder->readFrame();
-        if (!mMediaDecoder->isVideoPacket(packet)) {
-            continue;
-        }
-        std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
-        if (frames.empty()) {
-            continue;
-        }
-        mVieoQue->push(frames);
-        usleep(1000 * 16);
-        if (!mVieoQue->isEmpty()) {
-            mVideoOutput->output(mVieoQue->pop());
-        } else {
-            LOGE("mVieoQue->isEmpty");
-        }
     }
 }

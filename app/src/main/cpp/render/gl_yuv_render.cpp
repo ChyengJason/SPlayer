@@ -4,7 +4,7 @@
 
 #include "gl_yuv_render.h"
 #include "gl_shader_source.h"
-#include "../android_log.h"
+#include "../util/android_log.h"
 
 const float VertexCoordData[] = {
         -1.0f, -1.0f,
@@ -42,7 +42,7 @@ GlYuvRender::~GlYuvRender() {
 }
 
 void GlYuvRender::onCreated() {
-    LOGE("GlYuvRender onCreated");
+    LOGD("GlYuvRender onCreated");
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
     GlRenderUtil::useProgram(program);
     vexPositionHandle = glGetAttribLocation(program, "position");
@@ -54,18 +54,18 @@ void GlYuvRender::onCreated() {
     textureY = GlRenderUtil::createTexture();
     textureU = GlRenderUtil::createTexture();
     textureV = GlRenderUtil::createTexture();
-    LOGE("program: %d", program);
-    LOGE("textureY: %d", textureY);
-    LOGE("textureU: %d", textureU);
-    LOGE("textureV: %d", textureV);
-    LOGE("textureYHandle: %d", textureYHandle);
-    LOGE("textureUHandle: %d", textureUHandle);
-    LOGE("textureVHandle: %d", textureVHandle);
-    LOGE("verPosArrayBufferId: %d", verPosArrayBufferId);
+    LOGD("program: %d", program);
+    LOGD("textureY: %d", textureY);
+    LOGD("textureU: %d", textureU);
+    LOGD("textureV: %d", textureV);
+    LOGD("textureYHandle: %d", textureYHandle);
+    LOGD("textureUHandle: %d", textureUHandle);
+    LOGD("textureVHandle: %d", textureVHandle);
+    LOGD("verPosArrayBufferId: %d", verPosArrayBufferId);
 }
 
 void GlYuvRender::onChangeSize(int width, int height) {
-    LOGE("GlYuvRender::onChangeSize");
+    LOGD("GlYuvRender::onChangeSize");
     this->frameWidth = width;
     this->frameHeight = height;
 }
@@ -128,7 +128,7 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
 }
 
 void GlYuvRender::createVertexBufferObjects() {
-    LOGE("GlYuvRender::createVertexBufferObjects");
+    LOGD("GlYuvRender::createVertexBufferObjects");
     GLuint * vbo = new GLuint[2];
     glGenBuffers(2, vbo);
 

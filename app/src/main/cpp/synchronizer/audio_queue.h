@@ -6,24 +6,25 @@
 #define SPLAYER_AUDIO_QUEUE_H
 
 #include <queue>
-#include "media_frame.h"
+#include "../media_frame.h"
+#include "../util/sync_queue.h"
 
 class AudioQueue {
 public:
     AudioQueue();
     ~AudioQueue();
     void start();
-    void release();
+    void finish();
     void push(AudioFrame* frame);
     void push(std::vector<AudioFrame*> frames);
     AudioFrame* pop();
     bool isEmpty();
     void clear();
     int size();
-
+    bool isRunning();
 private:
-    pthread_mutex_t mQueMutex;
-    std::queue<AudioFrame*> mAudioFrameQue;
+    bool isInited;
+    SyncQueue<AudioFrame*> mAudioFrameQue;
 };
 
 

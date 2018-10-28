@@ -5,10 +5,10 @@
 #include <unistd.h>
 #include "audio_player.h"
 #include "audio_player_util.h"
-#include "../android_log.h"
+#include "../util/android_log.h"
 
 AudioPlayer::AudioPlayer() {
-
+    isPlaying = false;
 }
 
 AudioPlayer::~AudioPlayer() {
@@ -19,6 +19,7 @@ void AudioPlayer::create(size_t samplerate, size_t channelCount) {
     LOGD("AudioPlayer createEngine：%d", createEngine());
     LOGD("AudioPlayer createMixVolume：%d", createMixVolume());
     LOGD("AudioPlayer createPlayer: %d", createPlayer(samplerate, channelCount));
+    isPlaying = false;
 }
 
 bool AudioPlayer::createEngine() {
@@ -83,6 +84,7 @@ bool AudioPlayer::createPlayer(size_t samplerate, size_t channelCount) {
 }
 
 void AudioPlayer::release() {
+    isPlaying = false;
     if(mAudioPlayerObjet != NULL){
         (*mAudioPlayerObjet)->Destroy(mAudioPlayerObjet);
         mAudioPlayerObjet = NULL;
@@ -103,24 +105,37 @@ void AudioPlayer::release() {
 
 void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterface, void *context) {
     AudioPlayer* player = (AudioPlayer*) context;
-    AudioFrame* audioFrame;
-    bool isExist = player->getAudioFrameCallback(&audioFrame);
-    if (isExist && audioFrame != NULL) {
-        SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, audioFrame->data, audioFrame->size);
-        LOGD("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(audioFrame), strlen(audioFrame->data));
-        //delete audioFrame;
+    char* data = NULL;
+    int size = 0;
+    bool isExist = player->getAudioDataCallback(&data, &size);
+    if (!isExist || data == NULL || size <= 0) {
+        player->isPlaying = false;
+        return;
+    }
+    SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, data, size);
+//    LOGE("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(data), strlen(data));
+    if (result != SL_RESULT_SUCCESS) {
+        player->isPlaying = false;
     }
 }
 
 bool AudioPlayer::pause() {
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PAUSED);
-    return result == SL_RESULT_SUCCESS;
+    if (result == SL_RESULT_SUCCESS) {
+        isPlaying = false;
+        return true;
+    }
+    return false;
 }
 
 bool AudioPlayer::play() {
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PLAYING);
     PlayerCallback(mBufferQueueInterface, this);
-    return result == SL_RESULT_SUCCESS;
+    if (result == SL_RESULT_SUCCESS) {
+        isPlaying = true;
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -131,4 +146,8 @@ bool AudioPlayer::play() {
 bool AudioPlayer::setVolume(int level) {
     SLresult result = (*mVolume)->SetVolumeLevel(mVolume, (SLmillibel) ((1.0f - level/ 100.0f) * -5000));
     return result;
+}
+
+bool AudioPlayer::isRunning() {
+    return isPlaying;
 }

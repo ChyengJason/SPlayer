@@ -5,7 +5,7 @@
 #include <android/native_window.h>
 #include <GLES3/gl3.h>
 #include "egl_core.h"
-#include "../android_log.h"
+#include "../util/android_log.h"
 
 EglCore::EglCore() : mEglConfig(), mEglDisplay(EGL_NO_DISPLAY) {
 

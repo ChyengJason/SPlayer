@@ -9,23 +9,33 @@
 #include "opensl/audio_player.h"
 #include "media_frame.h"
 
-typedef AudioFrame* (*GetAudioFrameCallback)();
+class IAudioOutput {
+public:
+    virtual ~IAudioOutput() {}
+    virtual AudioFrame* getAudioFrame() = 0;
+};
 
 class AudioOutput: public AudioPlayer {
 public:
-    AudioOutput();
-    ~AudioOutput();
-    bool start(int channel, int samplerate, GetAudioFrameCallback);
+    AudioOutput(IAudioOutput* callback);
+    virtual ~AudioOutput();
+    void start(int channel, int samplerate);
     bool pause();
-    bool resume();
-    void stop();
+    bool play();
+    void finish();
+    void signalRenderFrame();
 
 protected:
-    virtual bool getAudioFrameCallback(AudioFrame** );
+    virtual bool getAudioDataCallback(char** data, int* size);
+
+private:
+    void copyAudioFrame(AudioFrame *pFrame);
 
 private:
     double curPresentTime;
-    GetAudioFrameCallback mGetAudioCallback;
+    IAudioOutput* mOutputInterface;
+    char* mData;
+    int mDataSize;
 };
 
 

@@ -11,7 +11,7 @@ extern "C" {
 #include "libavformat/avformat.h" // 封装格式
 #include "libswscale/swscale.h" // 变换信息
 #include "libswresample/swresample.h" //音频采样
-#include "android_log.h"
+#include "util/android_log.h"
 };
 /**
  * 负责解码音视频

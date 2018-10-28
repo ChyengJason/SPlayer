@@ -9,7 +9,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
-#include "../cpp/android_log.h"
+#include "../cpp/util/android_log.h"
 }
 
 MediaPlayerController* mPlayerController = new MediaPlayerController;
@@ -17,14 +17,14 @@ MediaPlayerController* mPlayerController = new MediaPlayerController;
 extern "C"
 JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_printConfig(JNIEnv *env, jobject instance) {
     std::string config = avcodec_configuration();
-    LOGE(" 测试打印 配置信息 %s", config.c_str());
+    LOGD(" 测试打印 配置信息 %s", config.c_str());
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_onSurfaceCreated(JNIEnv *env, jobject instance,
                                                              jobject surface) {
-    LOGE("jni onSurfaceCreated");
+    LOGD("jni onSurfaceCreated");
     ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
     mPlayerController->onSurfaceCreated(nativeWindow);
 }
@@ -33,21 +33,21 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_onSurfaceSizeChanged(JNIEnv *env, jobject instance,
                                                                  jint screenWidth, jint screenHeight) {
-    LOGE("jni onSurfaceSizeChanged");
+    LOGD("jni onSurfaceSizeChanged");
     mPlayerController->onSurfaceSizeChanged(screenWidth, screenHeight);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_onSurfaceDestroy(JNIEnv *env, jobject instance) {
-    LOGE("jni onSurfaceDestroy");
+    LOGD("jni onSurfaceDestroy");
     mPlayerController->onSurfaceDestroy();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_start(JNIEnv *env, jobject instance, jstring path_) {
-    LOGE("jni start");
+    LOGD("jni start");
     const char *path = env->GetStringUTFChars(path_, 0);
     mPlayerController->start(path);
     env->ReleaseStringUTFChars(path_, path);
@@ -56,41 +56,41 @@ Java_com_jscheng_splayer_player_VideoPlayer_start(JNIEnv *env, jobject instance,
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_stop(JNIEnv *env, jobject instance) {
-    LOGE("jni stop");
+    LOGD("jni stop");
     mPlayerController->stop();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_seek(JNIEnv *env, jobject instance, jdouble position) {
-    LOGE("jni seek");
+    LOGD("jni seek");
     mPlayerController->seek(position);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_pause(JNIEnv *env, jobject instance) {
-    LOGE("jni pause");
+    LOGD("jni pause");
     mPlayerController->pause();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_resume(JNIEnv *env, jobject instance) {
-    LOGE("jni resume");
+    LOGD("jni resume");
     mPlayerController->resume();
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_getDuration(JNIEnv *env, jobject instance) {
-    LOGE("jni getDuration");
+    LOGD("jni getDuration");
     return mPlayerController->getDuration();
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_getProgress(JNIEnv *env, jobject instance) {
-    LOGE("jni getProgress");
+    LOGD("jni getProgress");
     return mPlayerController->getProgress();
 }

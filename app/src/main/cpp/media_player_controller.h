@@ -5,10 +5,8 @@
 #ifndef SPLAYER_VIDEOPLAYERCONTROLLER_H
 #define SPLAYER_VIDEOPLAYERCONTROLLER_H
 
-
 #include <android/native_window.h>
-#include "media_synchronizer.h"
-#include "audio_output.h"
+#include "synchronizer/media_synchronizer.h"
 
 class MediaPlayerController {
 public:
@@ -28,19 +26,7 @@ public:
     void onSurfaceDestroy();
 
 private:
-    static TextureFrame* getTextureFrame();
-    static AudioFrame* getAudioFrame();
-    static void* run(void* self);
-    void startImp();
-private:
-//    MediaSynchronizer *mSynchronizer;
-    VideoOutput *mVideoOutput;
-    MediaDecoder *mMediaDecoder;
-    VideoQueue *mVieoQue;
-//    AudioOutput *mAudioOutput;
-    pthread_t mThread;
-    char* mPath;
+    MediaSynchronizer *mSynchronizer;
 };
-
 
 #endif //SPLAYER_VIDEOPLAYERCONTROLLER_H
