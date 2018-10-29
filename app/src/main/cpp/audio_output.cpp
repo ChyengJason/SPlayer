@@ -40,11 +40,18 @@ bool AudioOutput::pause() {
 
 bool AudioOutput::getAudioDataCallback(char **data, int *size) {
     AudioFrame* audioFrame = mOutputInterface->getAudioFrame();
-    if (audioFrame == NULL || audioFrame->size <= 0)
-        return false;
-    copyAudioFrame(audioFrame);
-    *data = mData;
-    *size = mDataSize;
+    if (audioFrame == NULL || audioFrame->size <= 0) {
+        *size = 4;
+        *data = new char[*size];
+        memset(*data, 0, *size);
+    } else {
+        *size = audioFrame->size;
+        *data = audioFrame->data;
+    }
+    //copyAudioFrame(audioFrame);
+    //    *data = mData;
+    //    *size = mDataSize;
+
     return true;
 }
 

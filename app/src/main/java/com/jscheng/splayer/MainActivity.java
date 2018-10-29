@@ -28,7 +28,7 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
         mVideoView = findViewById(R.id.video_view);
         mVideoPlayer = new VideoPlayer();
         mVideoView.getHolder().addCallback(this);
-        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.watermark);
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher_round);
         mVideoPlayer.setWaterMark(bitmap);
     }
 

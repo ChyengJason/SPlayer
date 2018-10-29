@@ -109,14 +109,10 @@ void AudioPlayer::PlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueInterf
     int size = 0;
     bool isExist = player->getAudioDataCallback(&data, &size);
     if (!isExist || data == NULL || size <= 0) {
-        player->isPlaying = false;
         return;
     }
     SLresult result = (*bufferQueueInterface)->Enqueue(bufferQueueInterface, data, size);
 //    LOGE("Enqueue %s size: %d , data.size: %d", AudioPlayerUtil::ResultToString(result), sizeof(data), strlen(data));
-    if (result != SL_RESULT_SUCCESS) {
-        player->isPlaying = false;
-    }
 }
 
 bool AudioPlayer::pause() {

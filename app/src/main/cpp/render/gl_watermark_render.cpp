@@ -14,10 +14,10 @@ const float VertexCoordData[] = {
 };
 
 const float TextureCoordData[] = {
-        0.0f,  1.0f,
-        1.0f,  1.0f,
-        0.0f,  0.0f,
-        1.0f,  0.0f,
+        0, 1, // 左上角
+        0, 0, //  左下角
+        1, 1, // 右上角
+        1, 0  // 右上角
 };
 
 const int CoordsPerVertexCount = 2;
@@ -72,11 +72,12 @@ void GlWaterMarkRender::onDraw() {
     if (!isCreatedMarkTexture) {
         createWaterMarkTexture();
     }
+    LOGE("GlWaterMarkRender::onDraw");
     GlRenderUtil::useProgram(program);
-    glClear(GL_DEPTH_BUFFER_BIT |GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); //指定混合模式
-    glViewport(20, 20, mFrameWidth, mFrameHeight);
+//    glClear(GL_DEPTH_BUFFER_BIT |GL_COLOR_BUFFER_BIT);
+//    glEnable(GL_BLEND);
+//    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); //指定混合模式
+    glViewport(0, 0, mFrameWidth, mFrameHeight);
     glEnableVertexAttribArray(verPosArrayBufferId);
     glEnableVertexAttribArray(fragCoordArrayBufferId);
 
@@ -119,6 +120,7 @@ void GlWaterMarkRender::createWaterMarkTexture() {
         GlRenderUtil::deleteTexture(mWatermarkTextureId);
         mWatermarkTextureId = -1;
     }
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     LOGE("GlWaterMarkRender::createWaterMarkTexture %dx%d", mImgWidth, mImgHeight);
     isCreatedMarkTexture = true;
     mWatermarkTextureId = GlRenderUtil::createBitmapTexture(mImgWidth, mImgHeight, mBuffer);

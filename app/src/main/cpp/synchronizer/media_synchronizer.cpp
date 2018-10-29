@@ -80,6 +80,7 @@ void MediaSynchronizer::runDecoding() {
             if (mAudioQue->isEmpty() && mTextureQue->isEmpty()) {
                 isRunning = false;
             } else {
+                usleep(1000 * 10);
                 mVideoOutput->signalRenderFrame();
                 mAudioOutput->signalRenderFrame();
             }
@@ -97,6 +98,7 @@ void MediaSynchronizer::runDecoding() {
             mAudioOutput->signalRenderFrame();
         }
     }
+    finish();
 }
 
 long MediaSynchronizer::getProgress() {
@@ -136,14 +138,14 @@ void MediaSynchronizer::onSurfaceDestroy() {
 
 TextureFrame *MediaSynchronizer::getTetureFrame() {
     // 在Video渲染线程获取，不会阻塞主线程
-    LOGE("MediaSynchronizer getTetureFrame TexuteQueue Size: %d", mTextureQue->size());
+//    LOGE("MediaSynchronizer getTetureFrame TexuteQueue Size: %d", mTextureQue->size());
     usleep(1000 * 35);
     return !mTextureQue->isEmpty() ? mTextureQue->pop() : NULL;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     // 在Audio渲染线程获取，不会阻塞主线程
-    LOGE("MediaSynchronizer getAudioFrame AudioQueue Size: %d", mAudioQue->size());
+//    LOGE("MediaSynchronizer getAudioFrame AudioQueue Size: %d", mAudioQue->size());
     usleep(1000 * 10);
     return !mAudioQue->isEmpty() ? mAudioQue->pop() : NULL;
 }

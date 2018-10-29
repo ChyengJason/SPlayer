@@ -176,7 +176,7 @@ void VideoQueue::renderHandler(void* frame) {
     LOGD("videoQueue 创建FBO纹理 %d mFbo %d onDraw %d x %d", outTexture, mFbo, videoFrame->frameWidth, videoFrame->frameHeight);
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
-    mGlRender.onDraw(videoFrame);
+//    mGlRender.onDraw(videoFrame);
     mWaterMarkRender.onDraw();
     mEglCore.swapBuffers(mPbufferSurface);
     // 解绑 fbo

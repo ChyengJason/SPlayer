@@ -97,10 +97,7 @@ JNIEXPORT jboolean JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_setWaterMark(JNIEnv *env, jobject instance, jobject bitmap) {
     LOGD("jni setWaterMark");
     AndroidBitmapInfo bitmapInfo;
-    int width, height;
-    void* buffer;
     int ret;
-
     if ((ret = AndroidBitmap_getInfo(env, bitmap, &bitmapInfo)) < 0) {
         LOGE("jni AndroidBitmap getInfo() failed ! error=%d", ret);
         return false;
@@ -109,14 +106,19 @@ Java_com_jscheng_splayer_player_VideoPlayer_setWaterMark(JNIEnv *env, jobject in
         LOGE("jni setWaterMark invalid rgb format");
         return false;
     }
-    if ((ret = AndroidBitmap_lockPixels(env, bitmap, &buffer)) < 0) {
+    void* temp;
+    if ((ret = AndroidBitmap_lockPixels(env, bitmap, &temp)) < 0) {
         LOGE("AndroidBitmap_lockPixels() failed ! error=%d", ret);
         return false;
     }
 
-    width = bitmapInfo.width;
-    height = bitmapInfo.height;
-    mPlayerController->setWaterMark(width, height, buffer);
+    int width = bitmapInfo.width;
+    int height = bitmapInfo.height;
+    int size = width * height * 4;
+    char* buffer = new char[size];
+    memcpy(buffer, temp, size);
     AndroidBitmap_unlockPixels(env, bitmap);
+
+    mPlayerController->setWaterMark(width, height, buffer);
     return true;
 }
