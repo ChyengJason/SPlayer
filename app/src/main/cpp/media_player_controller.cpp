@@ -65,3 +65,7 @@ void MediaPlayerController::release() {
         instance = NULL;
     }
 }
+
+void MediaPlayerController::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
+    mSynchronizer->setWaterMark(imgWidth, imgHeight, buffer);
+}

@@ -24,6 +24,7 @@ public:
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
+    void setWaterMark(int imgWidth, int imgHeight, void *buffer);
 
 private:
     MediaSynchronizer *mSynchronizer;

@@ -4,6 +4,7 @@
 
 #include "gl_base_render.h"
 #include "gl_shader_source.h"
+#include "../util/android_log.h"
 
 const float VertexCoordData[] = {
         -1, -1,// 左下角
@@ -41,11 +42,14 @@ GlBaseRender ::~GlBaseRender () {
 }
 
 void GlBaseRender ::onCreated() {
+    LOGE("GlBaseRender ::onCreated()");
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
+    LOGE("GlBaseRender ::onCreated() program %d", program);
     vexPosition = glGetAttribLocation(program, "position");
     fragCoord = glGetAttribLocation(program, "texcoord");
     fragTexture = glGetUniformLocation(program, "sample_texture");
     createVertexBufferObjects();
+    LOGE("GlBaseRender ::onCreated() finish");
 }
 
 void GlBaseRender ::onChangeSize(int width, int height) {

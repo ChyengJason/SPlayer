@@ -131,7 +131,7 @@ void VideoOutput::createContextHandler() {
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
     mGlRender.onCreated();
-    //LOGD(" VideoOutput::createEglContextHandler finish");
+    LOGD(" VideoOutput::createEglContextHandler finish");
 }
 
 void VideoOutput::releaseRenderHanlder() {

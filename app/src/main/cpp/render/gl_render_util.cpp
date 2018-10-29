@@ -11,7 +11,9 @@ GLuint GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
     checkError("AttachVertexShader");
     glAttachShader(program, fragmentShader);
     checkError("AttachVertexShader");
+    LOGE("GlRenderUtil::glLinkProgram1 %d %d, %d", program, vertexShader, fragmentShader);
     glLinkProgram(program);
+    LOGE("GlRenderUtil::glLinkProgram2 %d %d, %d", program, vertexShader, fragmentShader);
     int status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
     if (status != GL_TRUE) {
@@ -27,6 +29,7 @@ GLuint GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
     }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+    LOGE("GlRenderUtil::createProgram %d %d, %d", program, vertexShader, fragmentShader);
     return program;
 }
 
@@ -91,6 +94,25 @@ int GlRenderUtil::createTexture(int width, int height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     checkError("createTexture");
     return texture;
+}
+
+int GlRenderUtil::createTexture(int width, int height, void* buffer) {
+    if (width <= 0 || height <= 0 ) {
+        LOGE("cretaeTexture width or height <= 0");
+        return -1;
+    }
+    GLuint textureId;
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+    if (GlRenderUtil::checkError("glTexParameter")) {
+        return -1;
+    }
+    return textureId;
 }
 
 int GlRenderUtil::createExternalTexture() {

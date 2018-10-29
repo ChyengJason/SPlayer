@@ -1,5 +1,7 @@
 package com.jscheng.splayer;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
@@ -26,6 +28,8 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
         mVideoView = findViewById(R.id.video_view);
         mVideoPlayer = new VideoPlayer();
         mVideoView.getHolder().addCallback(this);
+//        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.watermark);
+//        mVideoPlayer.setWaterMark(bitmap);
     }
 
     @Override

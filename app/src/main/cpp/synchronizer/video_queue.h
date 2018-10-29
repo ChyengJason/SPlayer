@@ -11,6 +11,7 @@
 #include "../render/gl_base_render.h"
 #include "../render/gl_yuv_render.h"
 #include "../util/sync_queue.h"
+#include "../render/gl_watermark_render.h"
 
 enum VideoQueueMessageType {
     VIDEOQUEUE_MESSAGE_CREATE,
@@ -38,6 +39,7 @@ public:
     void start(int width, int height);
     void finish();
     bool isRunning();
+    void setWaterMark(int imgWidth, int imgHeight, void *buffer);
 
 private:
     void postMessage(VideoQueueMessage msg);
@@ -61,6 +63,7 @@ private:
     bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;
+//    GlWaterMarkRender mWaterMarkRender;
     EGLContext mContext;
     EGLSurface mPbufferSurface;
     int frameWidth;

@@ -148,7 +148,9 @@ void VideoQueue::createHandler() {
     mPbufferSurface = mEglCore.createBufferSurface(frameWidth, frameHeight);
     mEglCore.makeCurrent(mPbufferSurface, mContext);
     mGlRender.onCreated();
+//    mWaterMarkRender.onCreated();
     mGlRender.onChangeSize(frameWidth, frameHeight);
+//    mWaterMarkRender.onChangeSize(frameWidth, frameHeight);
     mFbo = GlRenderUtil::createFrameBuffer();
 }
 
@@ -157,6 +159,7 @@ void VideoQueue::releaseHandler() {
     mEglCore.makeCurrent(mPbufferSurface, mContext);
     GlRenderUtil::deleteFrameBuffer(mFbo);
     mGlRender.onDestroy();
+//    mWaterMarkRender.onDestroy();
     mEglCore.destroySurface(mPbufferSurface);
     mEglCore.destroyGL(mContext);
     mContext = EGL_NO_CONTEXT;
@@ -174,6 +177,7 @@ void VideoQueue::renderHandler(void* frame) {
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
     mGlRender.onDraw(videoFrame);
+//    mWaterMarkRender.onDraw();
     mEglCore.swapBuffers(mPbufferSurface);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
@@ -200,4 +204,8 @@ void VideoQueue::clearHandler() {
         TextureFrame* textrueFrame = mTextureFrameQue.pop();
         delete(textrueFrame);
     }
+}
+
+void VideoQueue::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
+//    mWaterMarkRender.setWaterMark(imgWidth, imgHeight, buffer);
 }
