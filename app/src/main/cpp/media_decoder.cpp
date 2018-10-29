@@ -4,7 +4,23 @@
 #include "media_decoder.h"
 
 MediaDecoder::MediaDecoder() {
-
+    mformatContext = NULL;
+    mVideoCodecContext = NULL;
+    mAudioCodecContext = NULL;
+    mVideoCodec = NULL;
+    mAudioCodec = NULL;
+    mVideoFrame = NULL;
+    mYuvFrame = NULL;
+    mSwsContext = NULL;
+    mVideoOutBuffer = NULL;
+    mSwrContext = NULL;
+    mAudioOutBuffer = NULL;
+    mAudioOutBufferSize = 0;
+    mVideoStreamIndex = -1;
+    mAudioStreamIndex = -1;
+    mOutChannels = 0;
+    mOutSampleRate = 0;
+    mOutChannelLayout = 0;
 }
 
 MediaDecoder::~MediaDecoder() {

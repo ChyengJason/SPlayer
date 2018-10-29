@@ -67,6 +67,7 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 void MediaSynchronizer::runDecoding() {
     int count = 0;
     AVPacket* packet;
+    isRunning = true;
     while (isRunning) {
         if (mTextureQue->size() > 15) {
             usleep(1000 * 10);
