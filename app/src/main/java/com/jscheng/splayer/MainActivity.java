@@ -1,19 +1,16 @@
 package com.jscheng.splayer;
 
 import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.TextView;
-
 import com.jscheng.splayer.player.VideoPlayer;
 import com.jscheng.splayer.utils.PermissionUtil;
 import com.jscheng.splayer.utils.StorageUtil;
 import com.jscheng.splayer.widget.VideoSurfaceView;
 
-public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback{
+public class MainActivity extends BaseActivity implements SurfaceHolder.Callback{
     private static final String TAG = "CJS";
     private static final int REQUEST_CODE = 1;
     private VideoPlayer mVideoPlayer;
