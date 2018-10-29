@@ -20,6 +20,12 @@ const float TextureCoordData[] = {
         1.0f,  0.0f,
 };
 
+const int CoordsPerVertexCount = 2;
+
+const int CoordsPerTextureCount = 2;
+
+const int VertexCount = 4;
+
 GlWaterMarkRender::GlWaterMarkRender() {
     useWaterMark = false;
     isCreatedMarkTexture = false;
@@ -37,6 +43,9 @@ void GlWaterMarkRender::onCreated() {
     program = GlRenderUtil::createProgram(loadVertexShader(), loadFragmentShader());
     GlRenderUtil::useProgram(program);
     createVertexBufferObjects();
+    vexPosition = glGetAttribLocation(program, "position");
+    fragCoord = glGetAttribLocation(program, "texcoord");
+    fragTexture = glGetUniformLocation(program, "sample_texture");
 }
 
 void GlWaterMarkRender::onChangeSize(int width, int height) {
@@ -45,9 +54,12 @@ void GlWaterMarkRender::onChangeSize(int width, int height) {
 }
 
 void GlWaterMarkRender::onDestroy() {
-    GlRenderUtil::deleteTexture(mWatermarkTextureId);
-    isCreatedMarkTexture = false;
-    mWatermarkTextureId = -1;
+    GlRenderUtil::useProgram(program);
+    if (isCreatedMarkTexture && mWatermarkTextureId >= 0) {
+        GlRenderUtil::deleteTexture(mWatermarkTextureId);
+        isCreatedMarkTexture = false;
+        mWatermarkTextureId = -1;
+    }
     glDeleteBuffers(1, &verPosArrayBufferId);
     glDeleteBuffers(1, &fragCoordArrayBufferId);
     GlRenderUtil::deleteProgram(program);
@@ -61,9 +73,28 @@ void GlWaterMarkRender::onDraw() {
         createWaterMarkTexture();
     }
     GlRenderUtil::useProgram(program);
-    glViewport(0, 0, mFrameWidth, mFrameHeight);
+    glClear(GL_DEPTH_BUFFER_BIT |GL_COLOR_BUFFER_BIT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); //指定混合模式
+    glViewport(20, 20, mFrameWidth, mFrameHeight);
     glEnableVertexAttribArray(verPosArrayBufferId);
     glEnableVertexAttribArray(fragCoordArrayBufferId);
+
+    glBindBuffer(GL_ARRAY_BUFFER, verPosArrayBufferId);
+    glVertexAttribPointer(vexPosition, CoordsPerVertexCount, GL_FLOAT, false, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, fragCoordArrayBufferId);
+    glVertexAttribPointer(fragCoord, CoordsPerTextureCount, GL_FLOAT, false, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, mWatermarkTextureId);
+    glUniform1i(fragTexture, 0);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, VertexCount);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisableVertexAttribArray(vexPosition);
+    glDisableVertexAttribArray(fragCoord);
+    glDisable(GL_BLEND);
 }
 
 void GlWaterMarkRender::createVertexBufferObjects() {
@@ -88,10 +119,9 @@ void GlWaterMarkRender::createWaterMarkTexture() {
         GlRenderUtil::deleteTexture(mWatermarkTextureId);
         mWatermarkTextureId = -1;
     }
-    LOGE("GlWaterMarkRender::createWaterMarkTexture");
+    LOGE("GlWaterMarkRender::createWaterMarkTexture %dx%d", mImgWidth, mImgHeight);
     isCreatedMarkTexture = true;
-    mWatermarkTextureId = GlRenderUtil::createTexture(mImgWidth, mImgHeight, mBuffer);
-    LOGE("GlWaterMarkRender::createWaterMarkTexture finish");
+    mWatermarkTextureId = GlRenderUtil::createBitmapTexture(mImgWidth, mImgHeight, mBuffer);
 }
 
 int GlWaterMarkRender::loadVertexShader() {

@@ -63,7 +63,7 @@ private:
     bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;
-//    GlWaterMarkRender mWaterMarkRender;
+    GlWaterMarkRender mWaterMarkRender;
     EGLContext mContext;
     EGLSurface mPbufferSurface;
     int frameWidth;

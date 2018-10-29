@@ -11,9 +11,7 @@ GLuint GlRenderUtil::createProgram(int vertexShader, int fragmentShader) {
     checkError("AttachVertexShader");
     glAttachShader(program, fragmentShader);
     checkError("AttachVertexShader");
-    LOGE("GlRenderUtil::glLinkProgram1 %d %d, %d", program, vertexShader, fragmentShader);
     glLinkProgram(program);
-    LOGE("GlRenderUtil::glLinkProgram2 %d %d, %d", program, vertexShader, fragmentShader);
     int status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
     if (status != GL_TRUE) {
@@ -96,7 +94,7 @@ int GlRenderUtil::createTexture(int width, int height) {
     return texture;
 }
 
-int GlRenderUtil::createTexture(int width, int height, void* buffer) {
+int GlRenderUtil::createBitmapTexture(int width, int height, void* buffer) {
     if (width <= 0 || height <= 0 ) {
         LOGE("cretaeTexture width or height <= 0");
         return -1;

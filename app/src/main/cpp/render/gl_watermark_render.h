@@ -31,6 +31,9 @@ private:
     bool useWaterMark;
     bool isCreatedMarkTexture;
     int mWatermarkTextureId;
+    GLint vexPosition;
+    GLint fragCoord;
+    GLint fragTexture;
     GLuint verPosArrayBufferId;
     GLuint fragCoordArrayBufferId;
 };
