@@ -25,6 +25,8 @@ namespace GlRenderUtil {
 
     int createTexture(int width, int height);
 
+    int createTexture(int width, int height, void* buffer);
+
     void deleteTexture(GLuint texture);
 
     int createExternalTexture();

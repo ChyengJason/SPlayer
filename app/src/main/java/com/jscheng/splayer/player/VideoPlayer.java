@@ -1,5 +1,6 @@
 package com.jscheng.splayer.player;
 
+import android.graphics.Bitmap;
 import android.view.Surface;
 
 /**
@@ -40,5 +41,5 @@ public class VideoPlayer {
 
     public native long getProgress();
 
-
+    public native boolean setWaterMark(Bitmap bitmap);
 }

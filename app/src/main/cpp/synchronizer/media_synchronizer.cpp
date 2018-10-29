@@ -148,3 +148,7 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
     return !mAudioQue->isEmpty() ? mAudioQue->pop() : NULL;
 }
 
+void MediaSynchronizer::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
+    mTextureQue->setWaterMark(imgWidth, imgHeight, buffer)
+}
+

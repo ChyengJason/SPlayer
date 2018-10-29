@@ -5,12 +5,9 @@
 #include <string>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
+#include <android/bitmap.h>
 #include "../cpp/media_player_controller.h"
-
-extern "C" {
-#include <libavcodec/avcodec.h>
 #include "../cpp/util/android_log.h"
-}
 
 MediaPlayerController* mPlayerController = new MediaPlayerController;
 
@@ -93,4 +90,33 @@ JNIEXPORT jlong JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_getProgress(JNIEnv *env, jobject instance) {
     LOGD("jni getProgress");
     return mPlayerController->getProgress();
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_jscheng_splayer_player_VideoPlayer_setWaterMark(JNIEnv *env, jobject instance, jobject bitmap) {
+    LOGD("jni setWaterMark");
+    AndroidBitmapInfo bitmapInfo;
+    int width, height;
+    void* buffer;
+    int ret;
+
+    if ((ret = AndroidBitmap_getInfo(env, bitmap, &bitmapInfo)) < 0) {
+        LOGE("jni AndroidBitmap getInfo() failed ! error=%d", ret);
+        return false;
+    }
+    if (bitmapInfo.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+        LOGE("jni setWaterMark invalid rgb format");
+        return false;
+    }
+    if ((ret = AndroidBitmap_lockPixels(env, bitmap, &buffer)) < 0) {
+        LOGE("AndroidBitmap_lockPixels() failed ! error=%d", ret);
+        return false;
+    }
+
+    width = bitmapInfo.width;
+    height = bitmapInfo.height;
+    mPlayerController->setWaterMark(width, height, buffer);
+    AndroidBitmap_unlockPixels(env, bitmap);
+    return true;
 }
