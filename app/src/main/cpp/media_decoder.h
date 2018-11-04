@@ -33,6 +33,8 @@ public:
     int getHeight();
     int getWidth();
 
+    void seek(float d);
+
 private:
     bool init(const char* path);
     bool initVideoCodec();

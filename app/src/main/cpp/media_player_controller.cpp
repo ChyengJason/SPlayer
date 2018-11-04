@@ -27,7 +27,8 @@ void MediaPlayerController::stop() {
 void MediaPlayerController::pause() {
 }
 
-void MediaPlayerController::seek(double position) {
+void MediaPlayerController::seek(float position) {
+    mSynchronizer->seek(position);
 }
 
 void MediaPlayerController::suspend() {
@@ -37,11 +38,11 @@ void MediaPlayerController::resume() {
 }
 
 long MediaPlayerController::getDuration() {
-    return 0;
+    return mSynchronizer->getDuration();
 }
 
 long MediaPlayerController::getProgress() {
-    return 0;
+    return mSynchronizer->getProgress();
 }
 
 void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {

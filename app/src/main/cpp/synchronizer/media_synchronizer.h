@@ -17,6 +17,11 @@ const float MAX_BUFFER_DURATION = 1.0;
 const float MIN_BUFFER_DURATION = 0.5;
 const float MAX_FRAME_DIFF = 0.002;
 const float MAX_FRAME_JUDGE = 0.5;
+
+enum MediaStatus {
+    PLAY, STOP, SEEK, PAUSE
+};
+
 /**
  * 负责同步音视频
  */
@@ -29,10 +34,12 @@ public:
     void prepare(const char* path);
     void start();
     void finish();
+    void seek(float);
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
-
+    long getDuration();
+    double getProgress();
 private:
     void startDecodeThread();
     static void* runDecoderThread(void* self);
@@ -49,10 +56,13 @@ private:
     AudioQueue* mAudioQue;
     VideoOutput *mVideoOutput;
     AudioOutput *mAudioOutput;
+    long mDuration;
     double mVideoClock;
     double mAudioClock;
     double mVideoInterval;
     double mAudioInterval;
+    double mSeekSeconds;
+    MediaStatus mStatus;
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

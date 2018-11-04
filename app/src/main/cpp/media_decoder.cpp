@@ -65,7 +65,6 @@ bool MediaDecoder::init(const char* path) {
     initPacket();
     initVideoFrameAndSwsContext();
     initAudioFrameAndSwrContext();
-
     return true;
 }
 
@@ -476,4 +475,20 @@ AVFrame *MediaDecoder::scaleVideoFrame() {
                   mVideoFrame->height, mYuvFrame->data, mYuvFrame->linesize);
         return mYuvFrame;
     }
+}
+
+void MediaDecoder::seek(float seconds) {
+    int64_t seek_target = seconds * 1000000;
+    int64_t seek_min = INT64_MIN;
+    int64_t seek_max = INT64_MAX;
+	LOGE("before avformat_seek_file...");
+    int ret = avformat_seek_file(mformatContext, -1, seek_min, seek_target, seek_max, 0);
+	LOGE("after avformat_seek_file... ret is %d", ret);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "cc: error while seeking\n");
+    } else {
+        avcodec_flush_buffers(mAudioCodecContext);
+        avcodec_flush_buffers(mVideoCodecContext);
+    }
+
 }

@@ -15,7 +15,7 @@ public:
     void start(const char *path);
     void stop();
     void pause();
-    void seek(double position);
+    void seek(float position);
     void resume();
     void release();
     void suspend();

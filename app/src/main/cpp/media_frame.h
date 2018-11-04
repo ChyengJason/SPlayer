@@ -28,7 +28,7 @@ public:
 
 class AudioFrame {
 public:
-    AudioFrame() : data(NULL) {}
+    AudioFrame() : isSkip(false), data(NULL) {}
     ~AudioFrame() {
        if (data) delete(data);
     }
@@ -38,6 +38,7 @@ public:
     char *data;
     int size;
     double duration;
+    bool isSkip;
 };
 
 

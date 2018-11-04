@@ -5,18 +5,22 @@ import android.graphics.BitmapFactory;
 import android.support.annotation.NonNull;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
+
 import com.jscheng.splayer.player.VideoPlayer;
 import com.jscheng.splayer.utils.PermissionUtil;
 import com.jscheng.splayer.utils.StorageUtil;
 import com.jscheng.splayer.widget.VideoSurfaceView;
 
-public class MainActivity extends BaseActivity implements SurfaceHolder.Callback{
+public class MainActivity extends BaseActivity implements SurfaceHolder.Callback, View.OnClickListener{
     private static final String TAG = "CJS";
     private static final int REQUEST_CODE = 1;
     private VideoPlayer mVideoPlayer;
     private VideoSurfaceView mVideoView;
+    private Button mBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,9 +29,11 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
         getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN, WindowManager.LayoutParams. FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
+        mBtn = findViewById(R.id.btn);
         mVideoView = findViewById(R.id.video_view);
         mVideoPlayer = new VideoPlayer();
         mVideoView.getHolder().addCallback(this);
+        mBtn.setOnClickListener(this);
 //        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher_round);
     }
 
@@ -41,6 +47,7 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
 
     private void playMedia() {
         mVideoPlayer.start(StorageUtil.getSDPath() + "/" + "media.mp4");
+        mBtn.setText(mVideoPlayer.getDuration() + "");
     }
 
     @Override
@@ -63,5 +70,12 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         mVideoPlayer.onSurfaceDestroy();
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.btn) {
+            mVideoPlayer.seek(mVideoPlayer.getProgress() + 10 );
+        }
     }
 }
