@@ -91,34 +91,3 @@ Java_com_jscheng_splayer_player_VideoPlayer_getProgress(JNIEnv *env, jobject ins
     LOGD("jni getProgress");
     return mPlayerController->getProgress();
 }
-
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_com_jscheng_splayer_player_VideoPlayer_setWaterMark(JNIEnv *env, jobject instance, jobject bitmap) {
-    LOGD("jni setWaterMark");
-    AndroidBitmapInfo bitmapInfo;
-    int ret;
-    if ((ret = AndroidBitmap_getInfo(env, bitmap, &bitmapInfo)) < 0) {
-        LOGE("jni AndroidBitmap getInfo() failed ! error=%d", ret);
-        return false;
-    }
-    if (bitmapInfo.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
-        LOGE("jni setWaterMark invalid rgb format");
-        return false;
-    }
-    void* temp;
-    if ((ret = AndroidBitmap_lockPixels(env, bitmap, &temp)) < 0) {
-        LOGE("AndroidBitmap_lockPixels() failed ! error=%d", ret);
-        return false;
-    }
-
-    int width = bitmapInfo.width;
-    int height = bitmapInfo.height;
-    int size = width * height * 4;
-    char* buffer = new char[size];
-    memcpy(buffer, temp, size);
-    AndroidBitmap_unlockPixels(env, bitmap);
-
-    mPlayerController->setWaterMark(width, height, buffer);
-    return true;
-}

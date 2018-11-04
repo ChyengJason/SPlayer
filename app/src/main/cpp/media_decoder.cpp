@@ -231,7 +231,7 @@ AVPacket* MediaDecoder::readFrame() {
 }
 
 std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
-    LOGD("MediaDecoder decodeVideoFrame");
+//    LOGD("MediaDecoder decodeVideoFrame");
     std::vector<VideoFrame*> vec;
     if (packet == NULL || packet->stream_index != mVideoStreamIndex) {
         LOGE("不是視頻幀或者是空");
@@ -348,8 +348,8 @@ VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, A
     VideoFrame* yuvFrame = new VideoFrame;
     yuvFrame->frameWidth = mVideoCodecContext->width;
     yuvFrame->frameHeight = mVideoCodecContext->height;
-    yuvFrame->timestamp = 0;
-    yuvFrame->duration = 0;
+    yuvFrame->timestamp = timestamp;
+    yuvFrame->duration = duration;
 
     int width = mVideoCodecContext->width;
     int height = mVideoCodecContext->height;
@@ -366,8 +366,8 @@ VideoFrame *MediaDecoder::createVideoFrame(double timestamp , double duration, A
     yuvFrame->chromaR = new uint8_t[chromaRLength];
     copyFrameData(yuvFrame->chromaR, videoFrame->data[2], width/2, height/2, videoFrame->linesize[2]);
 
-    LOGD("size %d x %d, linesize %d  %d  %d", width, height, videoFrame->linesize[0], videoFrame->linesize[1], videoFrame->linesize[2]);
-    LOGD("lumaLen %d chromaB %d chromaR %d", lumaLength, chromaBLength, chromaRLength);
+//    LOGD("size %d x %d, linesize %d  %d  %d", width, height, videoFrame->linesize[0], videoFrame->linesize[1], videoFrame->linesize[2]);
+//    LOGD("lumaLen %d chromaB %d chromaR %d", lumaLength, chromaBLength, chromaRLength);
     return yuvFrame;
 }
 

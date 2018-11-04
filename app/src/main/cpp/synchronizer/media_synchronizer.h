@@ -5,18 +5,18 @@
 #ifndef SPLAYER_VIDEO_SYNCHRONIZER_H
 #define SPLAYER_VIDEO_SYNCHRONIZER_H
 
-#include "../media_decoder.h"
-#include "../media_frame.h"
-#include <queue>
 #include "pthread.h"
-#include "../video_output.h"
 #include "video_queue.h"
 #include "audio_queue.h"
+#include "../media_decoder.h"
+#include "../media_frame.h"
+#include "../video_output.h"
 #include "../audio_output.h"
 
 const float MAX_BUFFER_DURATION = 1.0;
 const float MIN_BUFFER_DURATION = 0.5;
-const float MAX_FRAME_DIFF_DIFF = 0.05;
+const float MAX_FRAME_DIFF = 0.002;
+const float MAX_FRAME_JUDGE = 0.5;
 /**
  * 负责同步音视频
  */
@@ -29,22 +29,17 @@ public:
     void prepare(const char* path);
     void start();
     void finish();
-    long getProgress();
-    long getDuration();
-    int getSamplerate();
-    int getChannelCount();
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
-    void setWaterMark(int imgWidth, int imgHeight, void *buffer);
 
 private:
     void startDecodeThread();
     static void* runDecoderThread(void* self);
     void runDecoding();
+    bool decodeFrame();
 
 private:
-    long curPresentTime;
     bool isRunning;
     MediaDecoder* mMediaDecoder;
     pthread_t mDecoderThread;
@@ -54,6 +49,10 @@ private:
     AudioQueue* mAudioQue;
     VideoOutput *mVideoOutput;
     AudioOutput *mAudioOutput;
+    double mVideoClock;
+    double mAudioClock;
+    double mVideoInterval;
+    double mAudioInterval;
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

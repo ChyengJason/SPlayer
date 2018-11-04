@@ -39,7 +39,7 @@ public:
     void start(int width, int height);
     void finish();
     bool isRunning();
-    void setWaterMark(int imgWidth, int imgHeight, void *buffer);
+    double getAllDuration();
 
 private:
     void postMessage(VideoQueueMessage msg);
@@ -63,12 +63,12 @@ private:
     bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;
-    GlWaterMarkRender mWaterMarkRender;
     EGLContext mContext;
     EGLSurface mPbufferSurface;
     int frameWidth;
     int frameHeight;
     int mFbo;
+    double mAllDuration;
 };
 
 

@@ -154,10 +154,14 @@ void VideoOutput::renderTextureHandler() {
     if (textureFrame == NULL) {
         return;
     }
-    LOGD("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
     mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
-    mGlRender.onDraw(textureFrame->textureId);
-    mEglCore.swapBuffers(mSurface);
+    if (!textureFrame->isSkip) {
+        LOGD("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
+        mGlRender.onDraw(textureFrame->textureId);
+        mEglCore.swapBuffers(mSurface);
+    } else {
+        LOGE("videouOutput 跳帧");
+    }
     GlRenderUtil::deleteTexture(textureFrame->textureId);
     delete textureFrame;
 }

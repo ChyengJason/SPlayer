@@ -37,11 +37,11 @@ void MediaPlayerController::resume() {
 }
 
 long MediaPlayerController::getDuration() {
-    return mSynchronizer->getDuration();
+    return 0;
 }
 
 long MediaPlayerController::getProgress() {
-    return mSynchronizer->getProgress();
+    return 0;
 }
 
 void MediaPlayerController::onSurfaceCreated(ANativeWindow *window) {
@@ -64,8 +64,4 @@ void MediaPlayerController::release() {
     if (instance != NULL) {
         instance = NULL;
     }
-}
-
-void MediaPlayerController::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
-    mSynchronizer->setWaterMark(imgWidth, imgHeight, buffer);
 }

@@ -43,13 +43,14 @@ public:
 
 class TextureFrame {
 public:
-    TextureFrame() {}
+    TextureFrame(): isSkip(false) {}
     ~TextureFrame() {}
     double timestamp;
     int screenHeight;
     int screenWidth;
     int textureId;
     double duration;
+    bool isSkip;
 };
 #endif //SPLAYER_AUDIOFRAME_H
 

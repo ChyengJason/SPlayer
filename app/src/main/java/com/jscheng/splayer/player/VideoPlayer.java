@@ -40,6 +40,4 @@ public class VideoPlayer {
     public native long getDuration();
 
     public native long getProgress();
-
-    public native boolean setWaterMark(Bitmap bitmap);
 }

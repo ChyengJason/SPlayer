@@ -12,7 +12,10 @@ MediaSynchronizer::MediaSynchronizer() {
     mTextureQue = new VideoQueue;
     mVideoOutput = new VideoOutput(this);
     mAudioOutput = new AudioOutput(this);
-    curPresentTime = 0;
+    mAudioClock = 0;
+    mVideoClock = 0;
+    mAudioInterval = 0;
+    mVideoInterval = 0;
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
@@ -36,8 +39,11 @@ void MediaSynchronizer::start() {
     if (!mAudioQue->isRunning()) {
         mAudioQue->start();
     }
-    mAudioOutput->start(getChannelCount(), getSamplerate());
-    curPresentTime = 0;
+    mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
+    mAudioClock = 0;
+    mVideoClock = 0;
+    mAudioInterval = 0;
+    mVideoInterval = 0;
     startDecodeThread();
 }
 
@@ -65,56 +71,51 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-    int count = 0;
-    AVPacket* packet;
     isRunning = true;
     while (isRunning) {
-        if (mTextureQue->size() > 15) {
-            usleep(1000 * 10);
-            mVideoOutput->signalRenderFrame();
-            mAudioOutput->signalRenderFrame();
-            continue;
-        }
-
-        if ((packet = mMediaDecoder->readFrame()) == NULL) {
-            if (mAudioQue->isEmpty() && mTextureQue->isEmpty()) {
+        double audioDuration = mAudioQue->getAllDuration();
+        double videoDuration = mTextureQue->getAllDuration();
+        LOGE("audioDuration: %lf, videoDuration: %lf", audioDuration, videoDuration);
+        if (audioDuration < MIN_BUFFER_DURATION || videoDuration < MIN_BUFFER_DURATION) {
+            bool success = decodeFrame();
+            if (!success && mAudioQue->isEmpty() && mTextureQue->isEmpty()) {
                 isRunning = false;
+                break;
             } else {
-                usleep(1000 * 10);
-                mVideoOutput->signalRenderFrame();
                 mAudioOutput->signalRenderFrame();
+                mVideoOutput->signalRenderFrame();
+                pthread_mutex_lock(&mDecoderMutex);
+                pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
+                pthread_mutex_unlock(&mDecoderMutex);
             }
-            continue;
-        }
-        if (mMediaDecoder->isVideoPacket(packet)) {
-            LOGD("解码视频帧 NO.%d", ++count);
-            std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
-            mTextureQue->push(frames);
-            mVideoOutput->signalRenderFrame();
-        } else if (mMediaDecoder->isAudioPacket(packet)){
-            LOGD("解码音频帧 NO.%d", ++count);
-            std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
-            mAudioQue->push(frames);
+        } else if (audioDuration > MAX_BUFFER_DURATION || videoDuration > MIN_BUFFER_DURATION) {
             mAudioOutput->signalRenderFrame();
+            mVideoOutput->signalRenderFrame();
+            pthread_mutex_lock(&mDecoderMutex);
+            pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
+            pthread_mutex_unlock(&mDecoderMutex);
         }
     }
     finish();
 }
 
-long MediaSynchronizer::getProgress() {
-    return curPresentTime;
-}
-
-long MediaSynchronizer::getDuration() {
-    return mMediaDecoder->getMediaDuration();
-}
-
-int MediaSynchronizer::getSamplerate() {
-    return mMediaDecoder ? mMediaDecoder->getSamplerate() : 0;
-}
-
-int MediaSynchronizer::getChannelCount() {
-    return mMediaDecoder ? mMediaDecoder->getChannelCount() : 0;
+bool MediaSynchronizer::decodeFrame() {
+    AVPacket* packet;
+    if ((packet = mMediaDecoder->readFrame()) == NULL) {
+        return false;
+    }
+    if (mMediaDecoder->isVideoPacket(packet)) {
+        LOGD("解码视频帧");
+        std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
+        mTextureQue->push(frames);
+        mVideoOutput->signalRenderFrame();
+    } else if (mMediaDecoder->isAudioPacket(packet)){
+        LOGD("解码音频帧");
+        std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
+        mAudioQue->push(frames);
+        mAudioOutput->signalRenderFrame();
+    }
+    return true;
 }
 
 void MediaSynchronizer::onSurfaceCreated(ANativeWindow *window) {
@@ -139,18 +140,60 @@ void MediaSynchronizer::onSurfaceDestroy() {
 TextureFrame *MediaSynchronizer::getTetureFrame() {
     // 在Video渲染线程获取，不会阻塞主线程
 //    LOGE("MediaSynchronizer getTetureFrame TexuteQueue Size: %d", mTextureQue->size());
-    usleep(1000 * 35);
-    return !mTextureQue->isEmpty() ? mTextureQue->pop() : NULL;
+    TextureFrame* textureFrame = !mTextureQue->isEmpty() ? mTextureQue->pop() : NULL;
+    if (textureFrame != NULL) {
+        double currentPts = textureFrame->timestamp;
+        if (currentPts - mVideoClock <= 0 ) {
+            currentPts = mVideoClock + mVideoInterval;
+        }
+
+        // 计算跟当前参考的时钟比较
+        double diff = currentPts - mAudioClock;
+        double delay = 0;
+        if (diff >= MAX_FRAME_JUDGE || diff <= -MAX_FRAME_JUDGE) {
+            delay = 0;
+            textureFrame->isSkip = true;
+        } else if (diff < -MAX_FRAME_DIFF) {
+            delay = 0;
+        } else if (diff > MAX_FRAME_DIFF) {
+            delay = diff;
+        }
+        if (delay >= MAX_FRAME_DIFF) {
+            usleep(delay * 1000000);
+            LOGE("视频帧delay : %lf", delay);
+        } else
+
+        LOGE("videopts: %lf, audioclock: %lf, videoclock %lf, interval: %lf, delay: %lf",
+             currentPts, mAudioClock, mVideoClock, mVideoInterval, delay);
+
+        // 设置当前时间
+        mVideoInterval = currentPts - mVideoClock;
+        if (mVideoInterval <= 0) {
+            mVideoInterval = textureFrame->duration;
+        }
+        mVideoClock = currentPts;
+        pthread_cond_signal(&mDecoderCond);
+    }
+    return textureFrame;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     // 在Audio渲染线程获取，不会阻塞主线程
-//    LOGE("MediaSynchronizer getAudioFrame AudioQueue Size: %d", mAudioQue->size());
-    usleep(1000 * 10);
-    return !mAudioQue->isEmpty() ? mAudioQue->pop() : NULL;
+    AudioFrame* audioFrame = !mAudioQue->isEmpty() ? mAudioQue->pop() : NULL;
+    if (audioFrame != NULL) {
+        // 修正pts
+        double currentPts = audioFrame->timestamp;
+        if (currentPts - mAudioClock <= 0) {
+            currentPts = mAudioClock + mAudioInterval;
+        }
+        LOGE("audiopts: %lf, audio clock: %lf, interval: %lf", currentPts, mAudioClock, mAudioInterval);
+        // 设置时间
+        mAudioInterval = currentPts - mAudioClock;
+        if (mAudioInterval <= 0) {
+            mAudioInterval = audioFrame->duration;
+        }
+        mAudioClock = currentPts;
+    }
+    pthread_cond_signal(&mDecoderCond);
+    return audioFrame;
 }
-
-void MediaSynchronizer::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
-    mTextureQue->setWaterMark(imgWidth, imgHeight, buffer);
-}
-

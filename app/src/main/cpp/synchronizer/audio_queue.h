@@ -22,9 +22,12 @@ public:
     void clear();
     int size();
     bool isRunning();
+    double getAllDuration();
+
 private:
     bool isInited;
     SyncQueue<AudioFrame*> mAudioFrameQue;
+    double mAllDuration;
 };
 
 

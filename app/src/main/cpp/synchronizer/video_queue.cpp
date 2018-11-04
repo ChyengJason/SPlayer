@@ -10,6 +10,7 @@ VideoQueue::VideoQueue() {
     mRenderThread = 0;
     isThreadInited = false;
     mContext = EGL_NO_CONTEXT;
+    mAllDuration = 0;
     pthread_mutex_init(&mRenderMutex, NULL);
     pthread_cond_init(&mRenderCond, NULL);
 }
@@ -28,6 +29,7 @@ void VideoQueue::start(int width, int height) {
     LOGD("VideoQueue start : %d x %d", width, height);
     this->frameWidth = width;
     this->frameHeight = height;
+    this->mAllDuration = 0;
     createRenderThread();
     postMessage(VIDEOQUEUE_MESSAGE_CREATE);
     isThreadInited = true;
@@ -63,6 +65,7 @@ void VideoQueue::push(std::vector<VideoFrame*> frames) {
     }
     std::vector<VideoQueueMessage> msgs;
     for (int i = 0; i < frames.size(); ++i) {
+        mAllDuration += frames[i]->duration;
         msgs.push_back(VideoQueueMessage(VIDEOQUEUE_MESSAGE_PUSH, frames[i]));
     }
     postMessage(msgs);
@@ -73,10 +76,13 @@ bool VideoQueue::isEmpty() {
 }
 
 TextureFrame *VideoQueue::pop() {
-    return mTextureFrameQue.pop();
+    TextureFrame* frame = mTextureFrameQue.pop();
+    mAllDuration -= frame->duration;
+    return frame;
 }
 
 void VideoQueue::clear() {
+    mAllDuration = 0;
     postMessage(VIDEOQUEUE_MESSAGE_CLEAR);
 }
 
@@ -148,9 +154,7 @@ void VideoQueue::createHandler() {
     mPbufferSurface = mEglCore.createBufferSurface(frameWidth, frameHeight);
     mEglCore.makeCurrent(mPbufferSurface, mContext);
     mGlRender.onCreated();
-    mWaterMarkRender.onCreated();
     mGlRender.onChangeSize(frameWidth, frameHeight);
-    mWaterMarkRender.onChangeSize(frameWidth, frameHeight);
     mFbo = GlRenderUtil::createFrameBuffer();
 }
 
@@ -159,7 +163,6 @@ void VideoQueue::releaseHandler() {
     mEglCore.makeCurrent(mPbufferSurface, mContext);
     GlRenderUtil::deleteFrameBuffer(mFbo);
     mGlRender.onDestroy();
-    mWaterMarkRender.onDestroy();
     mEglCore.destroySurface(mPbufferSurface);
     mEglCore.destroyGL(mContext);
     mContext = EGL_NO_CONTEXT;
@@ -176,8 +179,7 @@ void VideoQueue::renderHandler(void* frame) {
     LOGD("videoQueue 创建FBO纹理 %d mFbo %d onDraw %d x %d", outTexture, mFbo, videoFrame->frameWidth, videoFrame->frameHeight);
     GlRenderUtil::bindFrameTexture(mFbo, outTexture);
     // 绘制VideoFrame 到 fbo中
-//    mGlRender.onDraw(videoFrame);
-    mWaterMarkRender.onDraw();
+    mGlRender.onDraw(videoFrame);
     mEglCore.swapBuffers(mPbufferSurface);
     // 解绑 fbo
     GlRenderUtil::unBindFrameTexture();
@@ -206,6 +208,6 @@ void VideoQueue::clearHandler() {
     }
 }
 
-void VideoQueue::setWaterMark(int imgWidth, int imgHeight, void *buffer) {
-    mWaterMarkRender.setWaterMark(imgWidth, imgHeight, buffer);
+double VideoQueue::getAllDuration() {
+    return mAllDuration;
 }
