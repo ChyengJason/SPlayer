@@ -10,6 +10,7 @@
         android:layout_height="match_parent"/>
 
     <com.jscheng.splayer.widget.ProgressView
+        android:id="@+id/progress_view"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_alignParentBottom="true">

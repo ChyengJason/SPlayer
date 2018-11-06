@@ -38,8 +38,8 @@ public:
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
-    long getDuration();
-    double getProgress();
+    float getDuration();
+    float getProgress();
 private:
     void startDecodeThread();
     static void* runDecoderThread(void* self);

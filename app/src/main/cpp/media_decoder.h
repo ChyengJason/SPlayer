@@ -25,7 +25,7 @@ public:
     AVPacket* readFrame();
     std::vector<VideoFrame*> decodeVideoFrame(AVPacket*);
     std::vector<AudioFrame*> decodeAudioFrame(AVPacket*);
-    int64_t getMediaDuration();
+    float getMediaDuration();
     int getSamplerate();
     int getChannelCount();
     bool isVideoPacket(AVPacket* const packet);

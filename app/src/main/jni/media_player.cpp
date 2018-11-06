@@ -79,15 +79,15 @@ Java_com_jscheng_splayer_player_VideoPlayer_resume(JNIEnv *env, jobject instance
 }
 
 extern "C"
-JNIEXPORT jlong JNICALL
-Java_com_jscheng_splayer_player_VideoPlayer_getDuration(JNIEnv *env, jobject instance) {
-    LOGD("jni getDuration");
-    return mPlayerController->getDuration();
-}
-
-extern "C"
-JNIEXPORT jlong JNICALL
+JNIEXPORT jfloat JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_getProgress(JNIEnv *env, jobject instance) {
     LOGD("jni getProgress");
     return mPlayerController->getProgress();
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_jscheng_splayer_player_VideoPlayer_getDuration(JNIEnv *env, jobject instance) {
+    LOGD("jni getDuration");
+    return mPlayerController->getDuration();
 }

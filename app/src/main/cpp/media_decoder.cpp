@@ -321,11 +321,14 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
     return audioFrames;
 }
 
-int64_t MediaDecoder::getMediaDuration() {
-    if (mformatContext) {
-        return mformatContext->duration;
+float MediaDecoder::getMediaDuration() {
+    if(!mformatContext){
+        return 0;
     }
-    return 0;
+    if (mformatContext->duration == AV_NOPTS_VALUE){
+        return -1;
+    }
+    return (float)mformatContext->duration / AV_TIME_BASE;
 }
 
 AudioFrame *MediaDecoder::createAudioFrame(double timestamp , double duration, int size, uint8_t* data) {

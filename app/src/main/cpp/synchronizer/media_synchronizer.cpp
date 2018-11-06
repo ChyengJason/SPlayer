@@ -215,10 +215,10 @@ void MediaSynchronizer::seek(float seconds) {
     pthread_cond_signal(&mDecoderCond);
 }
 
-long MediaSynchronizer::getDuration() {
+float MediaSynchronizer::getDuration() {
     return mDuration;
 }
 
-double MediaSynchronizer::getProgress() {
+float MediaSynchronizer::getProgress() {
     return mVideoClock;
 }

@@ -19,8 +19,8 @@ public:
     void resume();
     void release();
     void suspend();
-    long getDuration();
-    long getProgress();
+    float getDuration();
+    float getProgress();
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();

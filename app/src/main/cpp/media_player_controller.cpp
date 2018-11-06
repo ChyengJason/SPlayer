@@ -37,11 +37,11 @@ void MediaPlayerController::suspend() {
 void MediaPlayerController::resume() {
 }
 
-long MediaPlayerController::getDuration() {
+float MediaPlayerController::getDuration() {
     return mSynchronizer->getDuration();
 }
 
-long MediaPlayerController::getProgress() {
+float MediaPlayerController::getProgress() {
     return mSynchronizer->getProgress();
 }
 

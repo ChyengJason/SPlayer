@@ -37,7 +37,7 @@ public class VideoPlayer {
 
     public native void resume();
 
-    public native long getDuration();
+    public native float getDuration();
 
-    public native long getProgress();
+    public native float getProgress();
 }
