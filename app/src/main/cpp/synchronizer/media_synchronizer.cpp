@@ -99,8 +99,8 @@ void MediaSynchronizer::runDecoding() {
             }
         } else if (mStatus == SEEK) {
             mMediaDecoder->seek(mSeekSeconds);
-//            mTextureQue->clear();
-//            mAudioQue->clear();
+            mTextureQue->clear();
+            mAudioQue->clear();
             mStatus = PLAY;
             usleep(20 * 1000);
         }
@@ -148,7 +148,7 @@ void MediaSynchronizer::onSurfaceDestroy() {
 
 TextureFrame *MediaSynchronizer::getTetureFrame() {
     // 在Video渲染线程获取，不会阻塞主线程
-    TextureFrame* textureFrame = !mTextureQue->isEmpty() ? mTextureQue->pop() : NULL;
+    TextureFrame* textureFrame = mTextureQue->pop() ;
     if (textureFrame != NULL) {
         double currentPts = textureFrame->timestamp;
         if (currentPts <= 0) {
@@ -186,7 +186,7 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     // 在Audio渲染线程获取，不会阻塞主线程
-    AudioFrame* audioFrame = !mAudioQue->isEmpty() ? mAudioQue->pop() : NULL;
+    AudioFrame* audioFrame = mAudioQue->pop() ;
     if (audioFrame != NULL) {
         // 修正pts
         double currentPts = audioFrame->timestamp;

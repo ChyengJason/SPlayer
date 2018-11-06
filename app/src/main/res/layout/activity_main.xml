@@ -15,4 +15,12 @@
         android:layout_height="50dp"
         android:layout_alignParentBottom="true">
     </com.jscheng.splayer.widget.ProgressView>
+
+    <Button
+        android:id="@+id/open_media_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="打开视频文件"
+        android:textSize="12dp"/>
 </RelativeLayout>
