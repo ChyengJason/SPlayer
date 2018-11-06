@@ -9,11 +9,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <Button
-        android:id="@+id/btn"
-        android:layout_width="100dp"
+    <com.jscheng.splayer.widget.ProgressView
+        android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:text="@string/app_name" />
+        android:layout_alignParentBottom="true">
+    </com.jscheng.splayer.widget.ProgressView>
 </RelativeLayout>

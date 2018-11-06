@@ -61,7 +61,6 @@ private:
     std::queue<VideoQueueMessage> mHandlerMessageQueue;
     std::queue<TextureFrame*> mTextureFrameQue;
 
-
     bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;
