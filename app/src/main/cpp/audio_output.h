@@ -29,9 +29,6 @@ protected:
     virtual bool getAudioDataCallback(char** data, int* size);
 
 private:
-    void copyAudioFrame(AudioFrame *pFrame);
-
-private:
     double curPresentTime;
     IAudioOutput* mOutputInterface;
     char* mData;

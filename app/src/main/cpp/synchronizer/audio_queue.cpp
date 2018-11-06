@@ -6,9 +6,11 @@
 
 AudioQueue::AudioQueue()
         : isInited(false) {
+    pthread_mutex_init(&mQueMutex, NULL);
 }
 
 AudioQueue::~AudioQueue() {
+    pthread_mutex_destroy(&mQueMutex);
 }
 
 void AudioQueue::start() {
@@ -17,11 +19,14 @@ void AudioQueue::start() {
 }
 
 void AudioQueue::push(AudioFrame *frame) {
+    pthread_mutex_lock(&mQueMutex);
     mAudioFrameQue.push(frame);
     mAllDuration += frame->duration;
+    pthread_mutex_unlock(&mQueMutex);
 }
 
 void AudioQueue::push(std::vector<AudioFrame *> frames) {
+    pthread_mutex_lock(&mQueMutex);
     if (!isInited || frames.empty()) {
         return;
     }
@@ -29,20 +34,30 @@ void AudioQueue::push(std::vector<AudioFrame *> frames) {
         mAudioFrameQue.push(frames[i]);
         mAllDuration += frames[i]->duration;
     }
+    pthread_mutex_unlock(&mQueMutex);
 }
 
 AudioFrame *AudioQueue::pop() {
-    AudioFrame* frame = mAudioFrameQue.pop();
-    mAllDuration -= frame->duration;
+    pthread_mutex_lock(&mQueMutex);
+    AudioFrame* frame = NULL;
+    if (!mAudioFrameQue.empty()) {
+        frame = mAudioFrameQue.front();
+        mAudioFrameQue.pop();
+        mAllDuration -= frame->duration;
+    }
+    pthread_mutex_unlock(&mQueMutex);
     return frame;
 }
 
 void AudioQueue::clear() {
+    pthread_mutex_lock(&mQueMutex);
     mAllDuration = 0;
-    while(!mAudioFrameQue.isEmpty()) {
-        AudioFrame* audioFrame = mAudioFrameQue.pop();
+    while(!mAudioFrameQue.empty()) {
+        AudioFrame* audioFrame = mAudioFrameQue.front();
+        mAudioFrameQue.pop();
         delete(audioFrame);
     }
+    pthread_mutex_unlock(&mQueMutex);
 }
 
 int AudioQueue::size() {
@@ -50,7 +65,7 @@ int AudioQueue::size() {
 }
 
 bool AudioQueue::isEmpty() {
-    return mAudioFrameQue.isEmpty();
+    return mAudioFrameQue.empty();
 }
 
 void AudioQueue::finish() {

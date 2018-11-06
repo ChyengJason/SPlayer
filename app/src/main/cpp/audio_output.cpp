@@ -48,10 +48,7 @@ bool AudioOutput::getAudioDataCallback(char **data, int *size) {
         *size = audioFrame->size;
         *data = audioFrame->data;
     }
-    //copyAudioFrame(audioFrame);
-    //    *data = mData;
-    //    *size = mDataSize;
-
+    delete audioFrame;
     return true;
 }
 
@@ -59,17 +56,4 @@ void AudioOutput::signalRenderFrame() {
     if (!AudioPlayer::isRunning()) {
         AudioPlayer::play();
     }
-}
-
-void AudioOutput::copyAudioFrame(AudioFrame *pFrame) {
-//    if (mDataSize != 0) {
-//        delete(mData);
-//        mDataSize = 0;
-//    }
-//    mDataSize = pFrame->size;
-//    mData = new char[mDataSize];
-//    memcmp(mData, pFrame->data, mDataSize);
-//    delete pFrame;
-    mDataSize = pFrame->size;
-    mData = pFrame->data;
 }

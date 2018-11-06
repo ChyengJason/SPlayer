@@ -30,7 +30,6 @@ class AudioFrame {
 public:
     AudioFrame() : isSkip(false), data(NULL) {}
     ~AudioFrame() {
-       if (data) delete(data);
     }
     int samplerate;
     int channels;

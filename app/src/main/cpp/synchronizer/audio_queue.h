@@ -7,7 +7,6 @@
 
 #include <queue>
 #include "../media_frame.h"
-#include "../util/sync_queue.h"
 
 class AudioQueue {
 public:
@@ -26,7 +25,8 @@ public:
 
 private:
     bool isInited;
-    SyncQueue<AudioFrame*> mAudioFrameQue;
+    pthread_mutex_t mQueMutex;
+    std::queue<AudioFrame*> mAudioFrameQue;
     double mAllDuration;
 };
 

@@ -12,6 +12,7 @@ extern "C" {
 
 VideoOutput::VideoOutput(IVideoOutput *callback) {
     pthread_mutex_init(&mRenderMutex, NULL);
+    pthread_mutex_init(&mMessageMutex, NULL);
     pthread_cond_init(&mRenderCond, NULL);
     mNativeWindow = NULL;
     mSurface = EGL_NO_SURFACE;
@@ -22,6 +23,7 @@ VideoOutput::VideoOutput(IVideoOutput *callback) {
 VideoOutput::~VideoOutput() {
     pthread_cond_destroy(&mRenderCond);
     pthread_mutex_destroy(&mRenderMutex);
+    pthread_mutex_destroy(&mMessageMutex);
     mOutputInterface = NULL;
 }
 
@@ -81,7 +83,9 @@ void *VideoOutput::renderHandlerThread(void *self) {
 }
 
 void VideoOutput::postMessage(VideoOutputMessage msg) {
+    pthread_mutex_lock(&mMessageMutex);
     mMessageQueue.push(msg);
+    pthread_mutex_unlock(&mMessageMutex);
     pthread_cond_signal(&mRenderCond);
 }
 
@@ -93,14 +97,20 @@ void VideoOutput::processMessages() {
             LOGE("processMessages 失败");
             return ;
         }
-        if (mMessageQueue.isEmpty()) {
+
+        if (mMessageQueue.empty()) {
             LOGD("VideoOutput MESSAGE 等待");
             pthread_cond_wait(&mRenderCond, &mRenderMutex);
             LOGD("VideoOutput MESSAGE 结束唤醒 %d", mMessageQueue.size());
             pthread_mutex_unlock(&mRenderMutex);
             continue;
         }
-        VideoOutputMessage msg = mMessageQueue.pop();
+
+        pthread_mutex_lock(&mMessageMutex);
+        VideoOutputMessage msg = mMessageQueue.front();
+        mMessageQueue.pop();
+        pthread_mutex_unlock(&mMessageMutex);
+
         switch (msg) {
             case MESSAGE_CREATE_CONTEXT:
                 createContextHandler();
@@ -144,9 +154,11 @@ void VideoOutput::releaseRenderHanlder() {
     ANativeWindow_release(mNativeWindow);
     mNativeWindow = NULL;
 
-    while (!mMessageQueue.isEmpty()) {
-        VideoOutputMessage message = mMessageQueue.pop();
+    pthread_mutex_lock(&mMessageMutex);
+    while (!mMessageQueue.empty()) {
+        mMessageQueue.pop();
     }
+    pthread_mutex_unlock(&mMessageMutex);
 }
 
 void VideoOutput::renderTextureHandler() {

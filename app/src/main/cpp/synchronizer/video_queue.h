@@ -10,7 +10,6 @@
 #include "../egl/egl_core.h"
 #include "../render/gl_base_render.h"
 #include "../render/gl_yuv_render.h"
-#include "../util/sync_queue.h"
 #include "../render/gl_watermark_render.h"
 
 enum VideoQueueMessageType {
@@ -57,8 +56,11 @@ private:
     pthread_cond_t mRenderCond;
     pthread_t mRenderThread;
 
-    SyncQueue<VideoQueueMessage> mHandlerMessageQueue;
-    SyncQueue<TextureFrame*> mTextureFrameQue;
+    pthread_mutex_t mMessageQueMutex;
+    pthread_mutex_t mTextureQueMutex;
+    std::queue<VideoQueueMessage> mHandlerMessageQueue;
+    std::queue<TextureFrame*> mTextureFrameQue;
+
 
     bool isThreadInited;
     EglCore mEglCore;

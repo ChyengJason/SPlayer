@@ -10,7 +10,6 @@
 #include "egl/egl_core.h"
 #include "render/gl_base_render.h"
 #include "render/gl_yuv_render.h"
-#include "util/sync_queue.h"
 #include <queue>
 
 enum VideoOutputMessage{
@@ -56,7 +55,8 @@ private:
     pthread_t mRenderHandlerThread;
     pthread_mutex_t mRenderMutex;
     pthread_cond_t mRenderCond;
-    SyncQueue<VideoOutputMessage> mMessageQueue;
+    std::queue<VideoOutputMessage> mMessageQueue;
+    pthread_mutex_t mMessageMutex;
     bool isThreadInited;
     IVideoOutput* mOutputInterface;
 };
