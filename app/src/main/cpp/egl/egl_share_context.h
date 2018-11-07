@@ -5,14 +5,22 @@
 #define SPLAYER_EGL_SHARE_CONTEXT_H
 
 #include <EGL/egl.h>
+#include <pthread.h>
 
 class EglShareContext{
 public:
-    static EGLContext getShareContext();
-    static void setShareContext(EGLContext context);
-
+    static EglShareContext& getInstance();
+    ~EglShareContext();
+    EGLContext getShareContext();
+    void setShareContext(EGLContext context);
+    void clearShareContext();
+    void lock();
+    void unlock();
 private:
-    static EGLContext mShareContext;
+    static EglShareContext instance;
+    EglShareContext();
+    EGLContext mShareContext;
+    pthread_mutex_t mMutex;
 };
 
 #endif

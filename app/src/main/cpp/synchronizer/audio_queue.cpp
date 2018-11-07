@@ -18,16 +18,9 @@ void AudioQueue::start() {
     mAllDuration = 0;
 }
 
-void AudioQueue::push(AudioFrame *frame) {
-    pthread_mutex_lock(&mQueMutex);
-    mAudioFrameQue.push(frame);
-    mAllDuration += frame->duration;
-    pthread_mutex_unlock(&mQueMutex);
-}
-
 void AudioQueue::push(std::vector<AudioFrame *> frames) {
     pthread_mutex_lock(&mQueMutex);
-    if (!isInited || frames.empty()) {
+    if (frames.empty()) {
         return;
     }
     for (int i = 0; i < frames.size(); ++i) {

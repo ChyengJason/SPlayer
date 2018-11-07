@@ -3,7 +3,6 @@
 //
 #include <unistd.h>
 #include "media_synchronizer.h"
-
 MediaSynchronizer::MediaSynchronizer() {
     pthread_cond_init(&mDecoderCond, NULL);
     pthread_mutex_init(&mDecoderMutex, NULL);
@@ -38,6 +37,7 @@ void MediaSynchronizer::prepare(const char *path) {
 
 void MediaSynchronizer::start() {
     mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
+//    mTextureQue->start();
     mAudioClock = 0;
     mVideoClock = 0;
     mAudioInterval = 0;
@@ -126,10 +126,11 @@ bool MediaSynchronizer::decodeFrame() {
     return true;
 }
 
-void MediaSynchronizer::onSurfaceCreated(ANativeWindow *window) {
-    mVideoOutput->onCreated(window);
-    mTextureQue->start(window);
+void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
+    mVideoOutput->onCreated(mwindow);
+    //usleep(1000 * 1000);
     mAudioQue->start();
+    mTextureQue->start();
     isSurfaceCreated = true;
     pthread_cond_signal(&mDecoderCond);
 }

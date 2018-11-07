@@ -64,10 +64,6 @@ void VideoOutput::createRenderHandlerThread() {
 }
 
 void VideoOutput::signalRenderFrame() {
-    if (!isThreadInited) {
-        LOGE("VideoOutput output 未初始化");
-        return;
-    }
     postMessage(MESSAGE_RENDER);
 }
 
@@ -132,11 +128,10 @@ void VideoOutput::processMessages() {
 }
 
 void VideoOutput::createContextHandler() {
-    mContext = mEglCore.createGL(EglShareContext::getShareContext());
-    LOGD(" VideoOutput::createEglContextHandler %d", mContext);
-    if (EglShareContext::getShareContext() == EGL_NO_CONTEXT) {
-        EglShareContext::setShareContext(mContext);
-    }
+    EglShareContext::getInstance().lock();
+    mContext = mEglCore.createGL(EglShareContext::getInstance().getShareContext());
+    EglShareContext::getInstance().setShareContext(mContext);
+    EglShareContext::getInstance().unlock();
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface, mContext);
     mGlRender.onCreated();
@@ -149,7 +144,7 @@ void VideoOutput::releaseRenderHanlder() {
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
     mEglCore.destroyGL(mContext);
-    EglShareContext::setShareContext(EGL_NO_CONTEXT);
+    EglShareContext::getInstance().clearShareContext();
     ANativeWindow_release(mNativeWindow);
     mNativeWindow = NULL;
 

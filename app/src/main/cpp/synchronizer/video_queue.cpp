@@ -10,7 +10,6 @@ VideoQueue::VideoQueue() {
     mRenderThread = 0;
     isThreadInited = false;
     mContext = EGL_NO_CONTEXT;
-    mWindow = NULL;
     mAllDuration = 0;
     pthread_mutex_init(&mRenderMutex, NULL);
     pthread_mutex_init(&mMessageQueMutex, NULL);
@@ -25,10 +24,9 @@ VideoQueue::~VideoQueue() {
     pthread_mutex_destroy(&mMessageQueMutex);
 }
 
-void VideoQueue::start(ANativeWindow *window) {
+void VideoQueue::start() {
     if (!isThreadInited) {
         LOGD("VideoQueue start 当前主线程：%lu", (unsigned long)pthread_self());
-        this->mWindow = window;
         this->mAllDuration = 0;
         createRenderThread();
         postMessage(VIDEOQUEUE_MESSAGE_CREATE);
@@ -41,7 +39,6 @@ void VideoQueue::finish()  {
     if (!isThreadInited) {
         return;
     }
-    mWindow = NULL;
     isThreadInited = false;
     postMessage(VIDEOQUEUE_MESSAGE_QUIT);
     //pthread_detach(mRenderThread);
@@ -71,8 +68,8 @@ void VideoQueue::postMessage(std::vector<VideoQueueMessage> msgs) {
 
 void VideoQueue::push(std::vector<VideoFrame*> frames) {
     //LOGD("VideoQueue pushFrames %d", frames.size());
-    if (!isThreadInited || frames.empty()) {
-        LOGE("VideoQueue 未初始化 或 frames为空");
+    if (frames.empty()) {
+        LOGE("frames为空");
         return;
     }
     std::vector<VideoQueueMessage> msgs;
@@ -88,9 +85,6 @@ bool VideoQueue::isEmpty() {
 }
 
 TextureFrame *VideoQueue::pop() {
-    if (!isThreadInited ) {
-        return NULL;
-    }
     pthread_mutex_lock(&mTextureQueMutex);
     TextureFrame* frame = NULL;
     if (!mTextureFrameQue.empty()) {
@@ -103,9 +97,6 @@ TextureFrame *VideoQueue::pop() {
 }
 
 void VideoQueue::clear() {
-    if (!isThreadInited ) {
-        return;
-    }
     mAllDuration = 0;
     postMessage(VIDEOQUEUE_MESSAGE_CLEAR);
 }
@@ -150,7 +141,7 @@ void VideoQueue::processMessages() {
         //LOGD("VideoQueue MESSAGE TYPE %d", msg.msgType);
         switch (msg.msgType) {
             case VIDEOQUEUE_MESSAGE_CREATE:
-                createContextHandler();
+                createHandler();
                 break;
             case VIDEOQUEUE_MESSAGE_PUSH:
                 renderHandler(msg.value);
@@ -171,12 +162,12 @@ void VideoQueue::processMessages() {
     pthread_exit(0);
 }
 
-void VideoQueue::createContextHandler() {
-    mContext = mEglCore.createGL(EglShareContext::getShareContext());
+void VideoQueue::createHandler() {
+    EglShareContext::getInstance().lock();
+    mContext = mEglCore.createGL(EglShareContext::getInstance().getShareContext());
     LOGD("videoQueue createHandler %ld", mContext);
-    if (EglShareContext::getShareContext() == EGL_NO_CONTEXT) {
-        EglShareContext::setShareContext(mContext);
-    }
+    EglShareContext::getInstance().setShareContext(mContext);
+    EglShareContext::getInstance().unlock();
 }
 
 void VideoQueue::releaseHandler() {

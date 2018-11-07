@@ -35,7 +35,7 @@ public:
     bool isEmpty();
     void clear();
     int size();
-    void start(ANativeWindow *window);
+    void start();
     void finish();
     bool isRunning();
     double getAllDuration();
@@ -46,11 +46,11 @@ private:
     void createRenderThread();
     static void* runRender(void *self);
     void processMessages();
-    void createContextHandler();
-    void createSurfaceHandler(int frameWidth, int frameHeight);
+    void createHandler();
     void releaseHandler();
     void renderHandler(void *Frame);
     void clearHandler();
+    void createSurfaceHandler(int frameWidth, int frameHeight);
 
 private:
     pthread_mutex_t mRenderMutex;
@@ -69,7 +69,6 @@ private:
     EGLSurface mPbufferSurface;
     int mFbo;
     double mAllDuration;
-    ANativeWindow* mWindow;
 };
 
 

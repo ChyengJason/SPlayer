@@ -14,7 +14,6 @@ public:
     ~AudioQueue();
     void start();
     void finish();
-    void push(AudioFrame* frame);
     void push(std::vector<AudioFrame*> frames);
     AudioFrame* pop();
     bool isEmpty();
