@@ -37,7 +37,6 @@ void MediaSynchronizer::prepare(const char *path) {
 
 void MediaSynchronizer::start() {
     mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
-//    mTextureQue->start();
     mAudioClock = 0;
     mVideoClock = 0;
     mAudioInterval = 0;
@@ -116,19 +115,16 @@ bool MediaSynchronizer::decodeFrame() {
         std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
         LOGD("解码视频帧 %d", frames.size());
         mTextureQue->push(frames);
-        mVideoOutput->signalRenderFrame();
     } else if (mMediaDecoder->isAudioPacket(packet)){
         std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
         LOGD("解码音频帧 %d", frames.size());
         mAudioQue->push(frames);
-        mAudioOutput->signalRenderFrame();
     }
     return true;
 }
 
 void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
     mVideoOutput->onCreated(mwindow);
-    //usleep(1000 * 1000);
     mAudioQue->start();
     mTextureQue->start();
     isSurfaceCreated = true;
@@ -160,7 +156,7 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
         // 计算跟当前参考的时钟比较
         double diff = currentPts - mAudioClock;
         double delay = 0;
-        if (diff >= MAX_FRAME_JUDGE || diff <= -MAX_FRAME_JUDGE) {
+        if (mStatus != PLAY || diff >= MAX_FRAME_JUDGE || diff <= -MAX_FRAME_JUDGE) {
             delay = 0;
             textureFrame->isSkip = true;
         } else if (diff < -MAX_FRAME_DIFF) {
@@ -189,15 +185,15 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     // 在Audio渲染线程获取，不会阻塞主线程
-    AudioFrame* audioFrame = mAudioQue->pop() ;
-    if (audioFrame != NULL) {
+    AudioFrame* audioFrame = mAudioQue->pop();
+    if (audioFrame != NULL ) {
         // 修正pts
         double currentPts = audioFrame->timestamp;
         if (currentPts <= 0) {
             currentPts = mAudioClock + mAudioInterval;
         }
         double diff = currentPts - mAudioClock;
-        if (diff >= MAX_FRAME_JUDGE || diff <= -MAX_FRAME_JUDGE) {
+        if (mStatus != PLAY || diff >= MAX_FRAME_JUDGE || diff <= -MAX_FRAME_JUDGE) {
             audioFrame->isSkip = true;
         }
         LOGE("audiopts: %lf, audio clock: %lf, interval: %lf", currentPts, mAudioClock, mAudioInterval);

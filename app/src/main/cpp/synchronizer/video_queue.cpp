@@ -90,7 +90,7 @@ TextureFrame *VideoQueue::pop() {
     if (!mTextureFrameQue.empty()) {
         frame = mTextureFrameQue.front();
         mTextureFrameQue.pop();
-        mAllDuration -= frame->duration;
+        mAllDuration =std::max(mAllDuration - frame->duration, 0.0);
     }
     pthread_mutex_unlock(&mTextureQueMutex);
     return frame;
@@ -223,6 +223,8 @@ void VideoQueue::renderHandler(void* frame) {
 void VideoQueue::clearHandler() {
     LOGD("VideoQueue::clearHandler");
     pthread_mutex_lock(&mMessageQueMutex);
+    pthread_mutex_lock(&mTextureQueMutex);
+
     while (!mHandlerMessageQueue.empty()) {
         VideoQueueMessage message = mHandlerMessageQueue.front();
         mHandlerMessageQueue.pop();
@@ -230,15 +232,13 @@ void VideoQueue::clearHandler() {
             delete(message.value);
         }
     }
-    pthread_mutex_unlock(&mMessageQueMutex);
-
-    pthread_mutex_lock(&mTextureQueMutex);
     while (!mTextureFrameQue.empty()) {
         TextureFrame* textureFrame = mTextureFrameQue.front();
         mTextureFrameQue.pop();
         delete(textureFrame);
     }
     pthread_mutex_unlock(&mTextureQueMutex);
+    pthread_mutex_unlock(&mMessageQueMutex);
 }
 
 double VideoQueue::getAllDuration() {

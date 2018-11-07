@@ -3,6 +3,7 @@
 //
 
 #include "audio_queue.h"
+#include "iostream"
 
 AudioQueue::AudioQueue()
         : isInited(false) {
@@ -36,7 +37,7 @@ AudioFrame *AudioQueue::pop() {
     if (!mAudioFrameQue.empty()) {
         frame = mAudioFrameQue.front();
         mAudioFrameQue.pop();
-        mAllDuration -= frame->duration;
+        mAllDuration = std::max(mAllDuration - frame->duration, 0.0);
     }
     pthread_mutex_unlock(&mQueMutex);
     return frame;
