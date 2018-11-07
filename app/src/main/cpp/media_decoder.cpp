@@ -11,6 +11,8 @@ MediaDecoder::MediaDecoder() {
     mAudioCodec = NULL;
     mVideoFrame = NULL;
     mYuvFrame = NULL;
+    mAudioFrame = NULL;
+    packet = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
     mSwrContext = NULL;
@@ -35,6 +37,8 @@ bool MediaDecoder::prepare(const char* path) {
     mAudioCodec = NULL;
     mVideoFrame = NULL;
     mYuvFrame = NULL;
+    mAudioFrame = NULL;
+    packet = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
     mSwrContext = NULL;

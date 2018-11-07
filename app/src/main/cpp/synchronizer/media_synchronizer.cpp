@@ -17,6 +17,7 @@ MediaSynchronizer::MediaSynchronizer() {
     mVideoClock = 0;
     mAudioInterval = 0;
     mVideoInterval = 0;
+    isSurfaceCreated = false;
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
@@ -36,12 +37,6 @@ void MediaSynchronizer::prepare(const char *path) {
 }
 
 void MediaSynchronizer::start() {
-    if (!mTextureQue->isRunning()) {
-        mTextureQue->start(mMediaDecoder->getWidth(),  mMediaDecoder->getHeight());
-    }
-    if (!mAudioQue->isRunning()) {
-        mAudioQue->start();
-    }
     mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
     mAudioClock = 0;
     mVideoClock = 0;
@@ -59,7 +54,6 @@ void MediaSynchronizer::finish() {
     mAudioOutput->finish();
     mVideoOutput->onDestroy();
     // 停止线程
-    isRunning = false;
     mStatus = STOP;
 }
 
@@ -77,8 +71,13 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
+    LOGD("MediaSynchronizer::runDecoding");
     while (mStatus != STOP) {
-        if (mStatus == PLAY) {
+        if (!isSurfaceCreated) {
+            pthread_mutex_lock(&mDecoderMutex);
+            pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
+            pthread_mutex_unlock(&mDecoderMutex);
+        } else if (mStatus == PLAY) {
             double audioDuration = mAudioQue->getAllDuration();
             double videoDuration = mTextureQue->getAllDuration();
             LOGE("audioDuration: %lf, videoDuration: %lf", audioDuration, videoDuration);
@@ -114,13 +113,13 @@ bool MediaSynchronizer::decodeFrame() {
         return false;
     }
     if (mMediaDecoder->isVideoPacket(packet)) {
-        LOGD("解码视频帧");
         std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
+        LOGD("解码视频帧 %d", frames.size());
         mTextureQue->push(frames);
         mVideoOutput->signalRenderFrame();
     } else if (mMediaDecoder->isAudioPacket(packet)){
-        LOGD("解码音频帧");
         std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
+        LOGD("解码音频帧 %d", frames.size());
         mAudioQue->push(frames);
         mAudioOutput->signalRenderFrame();
     }
@@ -129,8 +128,10 @@ bool MediaSynchronizer::decodeFrame() {
 
 void MediaSynchronizer::onSurfaceCreated(ANativeWindow *window) {
     mVideoOutput->onCreated(window);
-    mTextureQue->start(mMediaDecoder->getWidth(),  mMediaDecoder->getHeight());
+    mTextureQue->start(window);
     mAudioQue->start();
+    isSurfaceCreated = true;
+    pthread_cond_signal(&mDecoderCond);
 }
 
 void MediaSynchronizer::onSurfaceSizeChanged(int width, int height) {
@@ -143,7 +144,8 @@ void MediaSynchronizer::onSurfaceDestroy() {
     mAudioQue->finish();
     mTextureQue->finish();
     mAudioOutput->finish();
-    isRunning = false;
+    isSurfaceCreated = false;
+    pthread_cond_signal(&mDecoderCond);
 }
 
 TextureFrame *MediaSynchronizer::getTetureFrame() {

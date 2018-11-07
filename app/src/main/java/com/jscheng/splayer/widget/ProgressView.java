@@ -56,7 +56,7 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
         if (this.duration > 0) {
             int mins = this.duration / 60;
             int secs = this.duration % 60;
-            durationTextView.setText(mins + ":" + secs);
+            durationTextView.setText(formatDate(mins, secs));
             seekBar.setMax(this.duration);
         } else {
             durationTextView.setText(this.duration);
@@ -68,7 +68,7 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
         if (this.progress > 0) {
             int mins = this.progress / 60;
             int secs = this.progress % 60;
-            progressTextView.setText(mins + ":" + secs);
+            progressTextView.setText(formatDate(mins, secs));
             seekBar.setProgress(this.progress);
         } else {
             progressTextView.setText(this.progress + "");
@@ -95,5 +95,15 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
 
     public interface ProgressSeekListener{
         void seek(int duration);
+    }
+
+    private String formatDate(int mins, int seconds) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(mins).append(":");
+        if (seconds < 10) {
+            builder.append("0");
+        }
+        builder.append(seconds);
+        return builder.toString();
     }
 }

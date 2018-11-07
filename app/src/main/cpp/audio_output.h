@@ -29,10 +29,7 @@ protected:
     virtual bool getAudioDataCallback(char** data, int* size);
 
 private:
-    double curPresentTime;
     IAudioOutput* mOutputInterface;
-    char* mData;
-    int mDataSize;
 };
 
 

@@ -6,32 +6,19 @@
 
 AudioOutput::AudioOutput(IAudioOutput *callback) {
     mOutputInterface = callback;
-    mData = NULL;
-    mDataSize = 0;
 }
 
 AudioOutput::~AudioOutput() {
     mOutputInterface = NULL;
-    if(mDataSize != 0) {
-        delete(mData);
-        mData = NULL;
-        mDataSize = 0;
-    }
 }
 
 void AudioOutput::start(int channel, int samplerate) {
-    curPresentTime = 0;
     AudioPlayer::create(samplerate, channel);
 }
 
 
 void AudioOutput::finish() {
     AudioPlayer::release();
-    if(mDataSize != 0) {
-        delete(mData);
-        mData = NULL;
-        mDataSize = 0;
-    }
 }
 
 bool AudioOutput::pause() {

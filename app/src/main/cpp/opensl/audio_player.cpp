@@ -9,6 +9,14 @@
 
 AudioPlayer::AudioPlayer() {
     isPlaying = false;
+    mEngineObject = NULL; // 引擎接口对象
+    mEngineEngine = NULL; // 具体引擎对象实例
+    mOutputMixObject = NULL; // 混音器接口对象
+    mOutputMixEnvirRevarb = NULL; // 具体混音器对象实例
+    mAudioPlayerObjet = NULL; // 播放器接口对象
+    mPlayer = NULL; // 播放器接口
+    mVolume = NULL; // 音量
+    mBufferQueueInterface = NULL;// 缓冲区队列接口
 }
 
 AudioPlayer::~AudioPlayer() {

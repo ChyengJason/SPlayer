@@ -35,7 +35,7 @@ public:
     bool isEmpty();
     void clear();
     int size();
-    void start(int width, int height);
+    void start(ANativeWindow *window);
     void finish();
     bool isRunning();
     double getAllDuration();
@@ -46,7 +46,8 @@ private:
     void createRenderThread();
     static void* runRender(void *self);
     void processMessages();
-    void createHandler();
+    void createContextHandler();
+    void createSurfaceHandler(int frameWidth, int frameHeight);
     void releaseHandler();
     void renderHandler(void *Frame);
     void clearHandler();
@@ -66,10 +67,9 @@ private:
     GlYuvRender mGlRender;
     EGLContext mContext;
     EGLSurface mPbufferSurface;
-    int frameWidth;
-    int frameHeight;
     int mFbo;
     double mAllDuration;
+    ANativeWindow* mWindow;
 };
 
 

@@ -47,7 +47,6 @@ private:
     bool decodeFrame();
 
 private:
-    bool isRunning;
     MediaDecoder* mMediaDecoder;
     pthread_t mDecoderThread;
     pthread_cond_t mDecoderCond;
@@ -63,6 +62,7 @@ private:
     double mAudioInterval;
     double mSeekSeconds;
     MediaStatus mStatus;
+    bool isSurfaceCreated;
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

@@ -16,6 +16,7 @@ VideoOutput::VideoOutput(IVideoOutput *callback) {
     pthread_cond_init(&mRenderCond, NULL);
     mNativeWindow = NULL;
     mSurface = EGL_NO_SURFACE;
+    mContext = EGL_NO_CONTEXT;
     isThreadInited = false;
     mOutputInterface = callback;
 }
@@ -64,14 +65,10 @@ void VideoOutput::createRenderHandlerThread() {
 
 void VideoOutput::signalRenderFrame() {
     if (!isThreadInited) {
-        LOGE("VideoOutput output 還未初始化");
+        LOGE("VideoOutput output 未初始化");
         return;
     }
     postMessage(MESSAGE_RENDER);
-}
-
-void VideoOutput::output(void* frame) {
-
 }
 
 void *VideoOutput::renderHandlerThread(void *self) {
@@ -135,11 +132,13 @@ void VideoOutput::processMessages() {
 }
 
 void VideoOutput::createContextHandler() {
-    LOGD(" VideoOutput::createEglContextHandler");
-    EGLContext context = mEglCore.createGL(EglShareContext::getShareContext());
-    EglShareContext::setShareContext(context);
+    mContext = mEglCore.createGL(EglShareContext::getShareContext());
+    LOGD(" VideoOutput::createEglContextHandler %d", mContext);
+    if (EglShareContext::getShareContext() == EGL_NO_CONTEXT) {
+        EglShareContext::setShareContext(mContext);
+    }
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
-    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
+    mEglCore.makeCurrent(mSurface, mContext);
     mGlRender.onCreated();
     LOGD(" VideoOutput::createEglContextHandler finish");
 }
@@ -149,7 +148,7 @@ void VideoOutput::releaseRenderHanlder() {
     mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
-    mEglCore.destroyGL(EglShareContext::getShareContext());
+    mEglCore.destroyGL(mContext);
     EglShareContext::setShareContext(EGL_NO_CONTEXT);
     ANativeWindow_release(mNativeWindow);
     mNativeWindow = NULL;
@@ -166,7 +165,7 @@ void VideoOutput::renderTextureHandler() {
     if (textureFrame == NULL) {
         return;
     }
-    mEglCore.makeCurrent(mSurface, EglShareContext::getShareContext());
+    mEglCore.makeCurrent(mSurface, mContext);
     if (!textureFrame->isSkip) {
         LOGD("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
         mGlRender.onDraw(textureFrame->textureId);
