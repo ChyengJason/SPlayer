@@ -72,10 +72,10 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-    LOGD("MediaSynchronizer::runDecoding");
     while (true) {
         double audioDuration = mAudioQue->getAllDuration();
         double videoDuration = mTextureQue->getAllDuration();
+        LOGD("runDecoding audioDuration %lf, videoDuration %lf", audioDuration, videoDuration);
         if (!isSurfaceCreated || (audioDuration > MAX_BUFFER_DURATION && videoDuration > MAX_BUFFER_DURATION)) {
             pthread_mutex_lock(&mDecoderMutex);
             pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
@@ -231,13 +231,6 @@ void MediaSynchronizer::correctTime(AudioFrame *audioFrame) {
     double pts = audioFrame->timestamp;
     if (pts == mAudioClock) {
         pts = mAudioClock + mAudioDuration;
-    }
-    // 播放过快
-    if (mAudioClock > 0 && strlen(audioFrame->data) <= 0) {
-        LOGE("audio sleep %ld", audioFrame->duration);
-        usleep(audioFrame->duration * 1000000);
-    } else {
-        LOGE("audio data: %d", strlen(audioFrame->data));
     }
     mAudioDuration = audioFrame->duration;
     mAudioClock = pts;

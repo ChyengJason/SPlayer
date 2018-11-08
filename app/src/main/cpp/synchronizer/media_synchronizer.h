@@ -13,7 +13,7 @@
 #include "../video_output.h"
 #include "../audio_output.h"
 
-const float MAX_BUFFER_DURATION = 3.0;
+const float MAX_BUFFER_DURATION = 0.5;
 const float MAX_FRAME_DIFF = 0.002;
 const float MAX_JUDGE_DIFF = 1.0;
 
