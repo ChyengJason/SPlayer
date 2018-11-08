@@ -177,7 +177,9 @@ void GlRenderUtil::deleteFrameBuffer(GLuint fbo) {
 }
 
 void GlRenderUtil::deleteTexture(GLuint texture) {
+    LOGE("删除纹理%d",texture);
     glDeleteTextures(1, &texture);
+    glFlush();
 }
 
 void GlRenderUtil::unBindFrameTexture() {

@@ -485,6 +485,7 @@ AVFrame *MediaDecoder::scaleVideoFrame() {
 }
 
 void MediaDecoder::seek(float seconds) {
+    LOGE("seek begin");
     int64_t seek_target = seconds * 1000000;
     int64_t seek_min = INT64_MIN;
     int64_t seek_max = INT64_MAX;
@@ -497,5 +498,5 @@ void MediaDecoder::seek(float seconds) {
         avcodec_flush_buffers(mAudioCodecContext);
         avcodec_flush_buffers(mVideoCodecContext);
     }
-
+    LOGE("seek end");
 }
