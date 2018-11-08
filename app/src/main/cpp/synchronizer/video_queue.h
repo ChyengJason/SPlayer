@@ -69,6 +69,7 @@ private:
     EGLSurface mPbufferSurface;
     int mFbo;
     double mAllDuration;
+    bool isClearing;
 };
 
 

@@ -81,7 +81,7 @@ Java_com_jscheng_splayer_player_VideoPlayer_resume(JNIEnv *env, jobject instance
 extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_jscheng_splayer_player_VideoPlayer_getProgress(JNIEnv *env, jobject instance) {
-    LOGD("jni getProgress");
+    //LOGD("jni getProgress");
     return mPlayerController->getProgress();
 }
 

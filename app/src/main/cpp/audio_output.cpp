@@ -26,17 +26,22 @@ bool AudioOutput::pause() {
 }
 
 bool AudioOutput::getAudioDataCallback(char **data, int *size) {
+    bool result;
     AudioFrame* audioFrame = mOutputInterface->getAudioFrame();
     if (audioFrame == NULL || audioFrame->size <= 0) {
         *size = 4;
         *data = new char[*size];
         memset(*data, 0, *size);
+        result = false;
     } else {
         *size = audioFrame->size;
         *data = audioFrame->data;
+        result = true;
     }
-    delete audioFrame;
-    return true;
+	if (audioFrame != NULL) {
+		delete audioFrame;
+	}
+    return result;
 }
 
 void AudioOutput::signalRenderFrame() {

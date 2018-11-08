@@ -31,6 +31,7 @@ void VideoQueue::start() {
         createRenderThread();
         postMessage(VIDEOQUEUE_MESSAGE_CREATE);
         isThreadInited = true;
+        isClearing = false;
     }
 }
 
@@ -87,7 +88,7 @@ bool VideoQueue::isEmpty() {
 TextureFrame *VideoQueue::pop() {
     pthread_mutex_lock(&mTextureQueMutex);
     TextureFrame* frame = NULL;
-    if (!mTextureFrameQue.empty()) {
+    if (!isClearing && !mTextureFrameQue.empty()) {
         frame = mTextureFrameQue.front();
         mTextureFrameQue.pop();
         mAllDuration -= frame->duration;
@@ -98,6 +99,7 @@ TextureFrame *VideoQueue::pop() {
 
 void VideoQueue::clear() {
     mAllDuration = 0;
+    isClearing = true;
     postMessage(VIDEOQUEUE_MESSAGE_CLEAR);
 }
 
@@ -239,6 +241,7 @@ void VideoQueue::clearHandler() {
         delete(textureFrame);
     }
     pthread_mutex_unlock(&mTextureQueMutex);
+    isClearing = false;
 }
 
 double VideoQueue::getAllDuration() {
