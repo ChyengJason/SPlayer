@@ -35,6 +35,7 @@ public:
     void onSurfaceDestroy();
     float getDuration();
     float getProgress();
+
 private:
     void startDecodeThread();
     static void* runDecoderThread(void* self);

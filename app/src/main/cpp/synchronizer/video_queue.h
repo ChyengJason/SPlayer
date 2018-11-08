@@ -6,11 +6,13 @@
 #define SPLAYER_VIDEO_QUEUE_H
 
 #include <queue>
+#include <libavcodec/avcodec.h>
 #include "../media_frame.h"
 #include "../egl/egl_core.h"
 #include "../render/gl_base_render.h"
 #include "../render/gl_yuv_render.h"
 #include "../render/gl_watermark_render.h"
+#include "../media_decoder.h"
 
 enum VideoQueueMessageType {
     VIDEOQUEUE_MESSAGE_CREATE,
@@ -30,12 +32,12 @@ class VideoQueue {
 public:
     VideoQueue();
     ~VideoQueue();
-    void push(std::vector<VideoFrame*> frames);
+    void push(AVPacket* packet);
     TextureFrame* pop();
     bool isEmpty();
     void clear();
     int size();
-    void start();
+    void start(MediaDecoder* decoder);
     void finish();
     bool isRunning();
     double getAllDuration();
@@ -61,7 +63,7 @@ private:
     pthread_mutex_t mTextureQueMutex;
     std::queue<VideoQueueMessage> mHandlerMessageQueue;
     std::queue<TextureFrame*> mTextureFrameQue;
-
+    MediaDecoder *mMediaDecoder;
     bool isThreadInited;
     EglCore mEglCore;
     GlYuvRender mGlRender;

@@ -32,7 +32,7 @@ public:
     bool isAudioPacket(AVPacket* const packet);
     int getHeight();
     int getWidth();
-
+    void freePacket(AVPacket* packet);
     void seek(float d);
 
 private:
@@ -41,7 +41,6 @@ private:
     bool initAudioCodec();
     bool initVideoFrameAndSwsContext();
     bool initAudioFrameAndSwrContext();
-    void initPacket();
     bool getMediaInfo(const char* path);
     void release();
     AVFrame* scaleVideoFrame();
@@ -56,7 +55,6 @@ private:
     AVCodecContext *mAudioCodecContext;
     AVCodec *mVideoCodec;
     AVCodec *mAudioCodec;
-    AVPacket *packet;
 
     // 音频相关
     int mAudioStreamIndex;

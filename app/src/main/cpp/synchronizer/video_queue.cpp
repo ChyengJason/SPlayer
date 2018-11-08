@@ -24,10 +24,11 @@ VideoQueue::~VideoQueue() {
     pthread_mutex_destroy(&mMessageQueMutex);
 }
 
-void VideoQueue::start() {
+void VideoQueue::start(MediaDecoder* decoder) {
     if (!isThreadInited) {
         LOGD("VideoQueue start 当前主线程：%lu", (unsigned long)pthread_self());
-        this->mAllDuration = 0;
+        mAllDuration = 0;
+        mMediaDecoder = decoder;
         createRenderThread();
         postMessage(VIDEOQUEUE_MESSAGE_CREATE);
         isThreadInited = true;
@@ -40,6 +41,7 @@ void VideoQueue::finish()  {
     if (!isThreadInited) {
         return;
     }
+    mMediaDecoder = NULL;
     isThreadInited = false;
     postMessage(VIDEOQUEUE_MESSAGE_QUIT);
     //pthread_detach(mRenderThread);
@@ -54,31 +56,10 @@ void VideoQueue::postMessage(VideoQueueMessage msg) {
     mHandlerMessageQueue.push(msg);
     pthread_mutex_unlock(&mMessageQueMutex);
     pthread_cond_signal(&mRenderCond);
-    //LOGD("VideoQueue pthread_cond_signal %d", mHandlerMessageQueue.size());
 }
 
-void VideoQueue::postMessage(std::vector<VideoQueueMessage> msgs) {
-    pthread_mutex_lock(&mMessageQueMutex);
-    for (VideoQueueMessage message : msgs) {
-        mHandlerMessageQueue.push(message);
-    }
-    pthread_mutex_unlock(&mMessageQueMutex);
-    pthread_cond_signal(&mRenderCond);
-    //LOGD("VideoQueue pthread_cond_signal %d", mHandlerMessageQueue.size());
-}
-
-void VideoQueue::push(std::vector<VideoFrame*> frames) {
-    //LOGD("VideoQueue pushFrames %d", frames.size());
-    if (frames.empty()) {
-        LOGE("frames为空");
-        return;
-    }
-    std::vector<VideoQueueMessage> msgs;
-    for (int i = 0; i < frames.size(); ++i) {
-        mAllDuration += frames[i]->duration;
-        msgs.push_back(VideoQueueMessage(VIDEOQUEUE_MESSAGE_PUSH, frames[i]));
-    }
-    postMessage(msgs);
+void VideoQueue::push(AVPacket* packet) {
+    postMessage(VideoQueueMessage(VIDEOQUEUE_MESSAGE_PUSH, packet));
 }
 
 bool VideoQueue::isEmpty() {
@@ -192,34 +173,48 @@ void VideoQueue::createSurfaceHandler(int frameWidth, int frameHeight) {
     mFbo = GlRenderUtil::createFrameBuffer();
 }
 
-void VideoQueue::renderHandler(void* frame) {
-    VideoFrame * videoFrame = (VideoFrame*) frame;
+void VideoQueue::renderHandler(void* packet) {
+    AVPacket * mPacket = (AVPacket*) packet;
+    std::vector<VideoFrame*> videoFrames;
+    if (mMediaDecoder != NULL) {
+        videoFrames = mMediaDecoder->decodeVideoFrame(mPacket);
+        mMediaDecoder->freePacket(mPacket);
+    }
+
+    if (videoFrames.empty()) {
+        return;
+    }
+
     if (mPbufferSurface == EGL_NO_SURFACE) {
-        createSurfaceHandler(videoFrame->frameWidth, videoFrame->frameHeight);
+        createSurfaceHandler(videoFrames[0]->frameWidth, videoFrames[0]->frameHeight);
         LOGD("videoQueue renderHandler mPbufferSurface: %d", mPbufferSurface);
     }
-    mEglCore.makeCurrent(mPbufferSurface, mContext);
-    // 创建texture2D
-    int outTexture = GlRenderUtil::createTexture(videoFrame->frameWidth, videoFrame->frameHeight);
-    // 绑定到fbo
-    LOGD("videoQueue 创建FBO纹理 %d mFbo %d onDraw %d x %d", outTexture, mFbo, videoFrame->frameWidth, videoFrame->frameHeight);
-    GlRenderUtil::bindFrameTexture(mFbo, outTexture);
-    // 绘制VideoFrame 到 fbo中
-    mGlRender.onDraw(videoFrame);
-    mEglCore.swapBuffers(mPbufferSurface);
-    // 解绑 fbo
-    GlRenderUtil::unBindFrameTexture();
-    TextureFrame* textureFrame = new TextureFrame;
-    textureFrame->screenHeight = videoFrame->frameHeight;
-    textureFrame->screenWidth = videoFrame->frameWidth;
-    textureFrame->duration = videoFrame->duration;
-    textureFrame->timestamp = videoFrame->timestamp;
-    textureFrame->textureId = outTexture;
 
-    pthread_mutex_lock(&mTextureQueMutex);
-    mTextureFrameQue.push(textureFrame);
-    pthread_mutex_unlock(&mTextureQueMutex);
-    delete videoFrame;
+    for (int i = 0; i < videoFrames.size(); ++i) {
+        mEglCore.makeCurrent(mPbufferSurface, mContext);
+        // 创建texture2D
+        int outTexture = GlRenderUtil::createTexture(videoFrames[i]->frameWidth, videoFrames[i]->frameHeight);
+        // 绑定到fbo
+        LOGD("videoQueue 创建FBO纹理 %d mFbo %d onDraw %d x %d", outTexture, mFbo, videoFrames[i]->frameWidth, videoFrames[i]->frameHeight);
+        GlRenderUtil::bindFrameTexture(mFbo, outTexture);
+        // 绘制VideoFrame 到 fbo中
+        mGlRender.onDraw(videoFrames[i]);
+        mEglCore.swapBuffers(mPbufferSurface);
+        // 解绑 fbo
+        GlRenderUtil::unBindFrameTexture();
+        TextureFrame* textureFrame = new TextureFrame;
+        textureFrame->screenHeight = videoFrames[i]->frameHeight;
+        textureFrame->screenWidth = videoFrames[i]->frameWidth;
+        textureFrame->duration = videoFrames[i]->duration;
+        textureFrame->timestamp = videoFrames[i]->timestamp;
+        textureFrame->textureId = outTexture;
+
+        pthread_mutex_lock(&mTextureQueMutex);
+        mAllDuration += videoFrames[i]->duration;
+        mTextureFrameQue.push(textureFrame);
+        pthread_mutex_unlock(&mTextureQueMutex);
+        delete videoFrames[i];
+    }
 }
 
 void VideoQueue::clearHandler() {

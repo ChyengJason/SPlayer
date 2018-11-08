@@ -86,7 +86,6 @@ void MediaSynchronizer::runDecoding() {
         pthread_cond_signal(&mTextureCond);
         pthread_cond_signal(&mAudioCond);
     }
-    finish();
 }
 
 bool MediaSynchronizer::decodeFrame() {
@@ -99,25 +98,17 @@ bool MediaSynchronizer::decodeFrame() {
         return false;
     }
     if (mMediaDecoder->isVideoPacket(packet)) {
-        std::vector<VideoFrame*> frames = mMediaDecoder->decodeVideoFrame(packet);
-        LOGD("解码视频帧 %d", frames.size());
-        if (frames.size() > 0) {
-            mTextureQue->push(frames);
-        }
+        mTextureQue->push(packet);
     } else if (mMediaDecoder->isAudioPacket(packet)){
-        std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
-        LOGD("解码音频帧 %d", frames.size());
-        if (frames.size() > 0) {
-            mAudioQue->push(frames);
-        }
+        mAudioQue->push(packet);
     }
     return true;
 }
 
 void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
     mVideoOutput->onCreated(mwindow);
-    mAudioQue->start();
-    mTextureQue->start();
+    mAudioQue->start(mMediaDecoder);
+    mTextureQue->start(mMediaDecoder);
     isSurfaceCreated = true;
     pthread_cond_signal(&mDecoderCond);
 }
@@ -205,6 +196,9 @@ float MediaSynchronizer::getProgress() {
 }
 
 void MediaSynchronizer::correctTime(TextureFrame *textureFrame) {
+    if (textureFrame == NULL) {
+        return;
+    }
     double pts = textureFrame->timestamp;
     if (pts == mVideoClock) {
         pts = mVideoClock + mVideoDuration;
@@ -223,6 +217,7 @@ void MediaSynchronizer::correctTime(TextureFrame *textureFrame) {
     }
 
     if (delay > 0) {
+        LOGE("video sleep %ld", delay);
         usleep(delay * 1000000);
     }
     mVideoDuration = textureFrame->duration;
@@ -230,13 +225,19 @@ void MediaSynchronizer::correctTime(TextureFrame *textureFrame) {
 }
 
 void MediaSynchronizer::correctTime(AudioFrame *audioFrame) {
+    if (audioFrame == NULL) {
+        return;
+    }
     double pts = audioFrame->timestamp;
     if (pts == mAudioClock) {
         pts = mAudioClock + mAudioDuration;
     }
     // 播放过快
     if (mAudioClock > 0 && strlen(audioFrame->data) <= 0) {
+        LOGE("audio sleep %ld", audioFrame->duration);
         usleep(audioFrame->duration * 1000000);
+    } else {
+        LOGE("audio data: %d", strlen(audioFrame->data));
     }
     mAudioDuration = audioFrame->duration;
     mAudioClock = pts;

@@ -13,8 +13,8 @@ MediaPlayerController* mPlayerController = new MediaPlayerController;
 
 extern "C"
 JNIEXPORT void JNICALL Java_com_jscheng_splayer_player_VideoPlayer_printConfig(JNIEnv *env, jobject instance) {
-    std::string config = avcodec_configuration();
-    LOGD(" 测试打印 配置信息 %s", config.c_str());
+//    std::string config = avcodec_configuration();
+//    LOGD(" 测试打印 配置信息 %s", config.c_str());
 }
 
 extern "C"

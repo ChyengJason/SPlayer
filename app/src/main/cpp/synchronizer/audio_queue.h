@@ -6,15 +6,17 @@
 #define SPLAYER_AUDIO_QUEUE_H
 
 #include <queue>
+#include <libavcodec/avcodec.h>
 #include "../media_frame.h"
+#include "../media_decoder.h"
 
 class AudioQueue {
 public:
     AudioQueue();
     ~AudioQueue();
-    void start();
+    void start(MediaDecoder* mediaDecoder);
     void finish();
-    void push(std::vector<AudioFrame*> frames);
+    void push(AVPacket* packet);
     AudioFrame* pop();
     bool isEmpty();
     void clear();
@@ -23,10 +25,19 @@ public:
     double getAllDuration();
 
 private:
-    bool isInited;
-    pthread_mutex_t mQueMutex;
+    static void* runDecode(void* self);
+    void runDecodeImpl();
+
+private:
+    bool isFinish;
+    pthread_mutex_t mFrameQueMutex;
+    pthread_mutex_t mPacketMutex;
+    pthread_cond_t mDecodeCond;
+    pthread_t mDecodeThread;
+    std::queue<AVPacket*> mPacketQue;
     std::queue<AudioFrame*> mAudioFrameQue;
     double mAllDuration;
+    MediaDecoder* mMediaDecoder;
 };
 
 

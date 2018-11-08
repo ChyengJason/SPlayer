@@ -12,7 +12,6 @@ MediaDecoder::MediaDecoder() {
     mVideoFrame = NULL;
     mYuvFrame = NULL;
     mAudioFrame = NULL;
-    packet = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
     mSwrContext = NULL;
@@ -38,7 +37,6 @@ bool MediaDecoder::prepare(const char* path) {
     mVideoFrame = NULL;
     mYuvFrame = NULL;
     mAudioFrame = NULL;
-    packet = NULL;
     mSwsContext = NULL;
     mVideoOutBuffer = NULL;
     mSwrContext = NULL;
@@ -66,7 +64,6 @@ bool MediaDecoder::init(const char* path) {
         release();
         return false;
     }
-    initPacket();
     initVideoFrameAndSwsContext();
     initAudioFrameAndSwrContext();
     return true;
@@ -218,15 +215,12 @@ bool MediaDecoder::initAudioFrameAndSwrContext() {
     return true;
 }
 
-void MediaDecoder::initPacket() {
-    packet = new AVPacket;
-    av_init_packet(packet);
-}
-
 AVPacket* MediaDecoder::readFrame() {
     if (mformatContext == NULL) {
         return NULL;
     }
+    AVPacket* packet = new AVPacket;
+    av_init_packet(packet);
     if (av_read_frame(mformatContext, packet) >= 0) {
         return packet;
     }
@@ -396,11 +390,6 @@ void MediaDecoder::release() {
         delete mformatContext->streams[mVideoStreamIndex];
         mVideoStreamIndex = -1;
     }
-    if (packet) {
-        av_free_packet(packet);
-        delete packet;
-        packet = NULL;
-    }
     if (mYuvFrame) {
         av_free(mYuvFrame);
         mYuvFrame = NULL;
@@ -499,4 +488,11 @@ void MediaDecoder::seek(float seconds) {
         avcodec_flush_buffers(mVideoCodecContext);
     }
     LOGE("seek end");
+}
+
+void MediaDecoder::freePacket(AVPacket *packet) {
+    if (packet) {
+        av_free_packet(packet);
+        delete packet;
+    }
 }

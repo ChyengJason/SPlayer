@@ -6,52 +6,62 @@
 #include "iostream"
 
 AudioQueue::AudioQueue()
-        : isInited(false) {
-    pthread_mutex_init(&mQueMutex, NULL);
+        : isFinish(true)
+        , mMediaDecoder(NULL){
+    pthread_mutex_init(&mFrameQueMutex, NULL);
+    pthread_mutex_init(&mPacketMutex, NULL);
+    pthread_cond_init(&mDecodeCond, NULL);
 }
 
 AudioQueue::~AudioQueue() {
-    pthread_mutex_destroy(&mQueMutex);
+    pthread_mutex_destroy(&mPacketMutex);
+    pthread_mutex_destroy(&mFrameQueMutex);
+    pthread_cond_destroy(&mDecodeCond);
+    mMediaDecoder = NULL;
 }
 
-void AudioQueue::start() {
-    isInited = true;
+void AudioQueue::start(MediaDecoder* decoder) {
+    mMediaDecoder = decoder;
     mAllDuration = 0;
+    pthread_create(&mDecodeThread, NULL, runDecode, this);
 }
 
-void AudioQueue::push(std::vector<AudioFrame *> frames) {
-    pthread_mutex_lock(&mQueMutex);
-    if (frames.empty()) {
-        return;
-    }
-    for (int i = 0; i < frames.size(); ++i) {
-        mAudioFrameQue.push(frames[i]);
-        mAllDuration += frames[i]->duration;
-    }
-    pthread_mutex_unlock(&mQueMutex);
+void AudioQueue::push(AVPacket* packet) {
+    pthread_mutex_lock(&mPacketMutex);
+    mPacketQue.push(packet);
+    pthread_mutex_unlock(&mPacketMutex);
+    pthread_cond_signal(&mDecodeCond);
 }
 
 AudioFrame *AudioQueue::pop() {
-    pthread_mutex_lock(&mQueMutex);
+    pthread_mutex_lock(&mFrameQueMutex);
     AudioFrame* frame = NULL;
     if (!mAudioFrameQue.empty()) {
         frame = mAudioFrameQue.front();
         mAudioFrameQue.pop();
         mAllDuration = std::max(mAllDuration - frame->duration, 0.0);
     }
-    pthread_mutex_unlock(&mQueMutex);
+    pthread_mutex_unlock(&mFrameQueMutex);
     return frame;
 }
 
 void AudioQueue::clear() {
-    pthread_mutex_lock(&mQueMutex);
     mAllDuration = 0;
+    pthread_mutex_lock(&mFrameQueMutex);
     while(!mAudioFrameQue.empty()) {
         AudioFrame* audioFrame = mAudioFrameQue.front();
         mAudioFrameQue.pop();
         delete(audioFrame);
     }
-    pthread_mutex_unlock(&mQueMutex);
+    pthread_mutex_unlock(&mFrameQueMutex);
+
+    pthread_mutex_lock(&mPacketMutex);
+    while(!mPacketQue.empty()) {
+        AVPacket* packet = mPacketQue.front();
+        mPacketQue.pop();
+        mMediaDecoder->freePacket(packet);
+    }
+    pthread_mutex_unlock(&mPacketMutex);
 }
 
 int AudioQueue::size() {
@@ -64,13 +74,43 @@ bool AudioQueue::isEmpty() {
 
 void AudioQueue::finish() {
     clear();
-    isInited = false;
+    isFinish = true;
+    pthread_cond_signal(&mDecodeCond);
 }
 
 bool AudioQueue::isRunning() {
-    return isInited;
+    return !isFinish;
 }
 
 double AudioQueue::getAllDuration() {
     return mAllDuration;
+}
+
+void* AudioQueue::runDecode(void *self) {
+    AudioQueue* context = (AudioQueue*)self;
+    context->runDecodeImpl();
+    return 0;
+}
+
+void AudioQueue::runDecodeImpl() {
+    isFinish = false;
+    while (!isFinish) {
+        if (mPacketQue.empty()) {
+            pthread_cond_wait(&mDecodeCond, NULL);
+        } else if (mMediaDecoder != NULL) {
+            pthread_mutex_lock(&mPacketMutex);
+            AVPacket* packet = mPacketQue.front();
+            mPacketQue.pop();
+            pthread_mutex_unlock(&mPacketMutex);
+
+            std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
+            mMediaDecoder->freePacket(packet);
+            pthread_mutex_lock(&mFrameQueMutex);
+            for (int i = 0; i < frames.size(); ++i) {
+                mAudioFrameQue.push(frames[i]);
+                mAllDuration += frames[i]->duration;
+            }
+            pthread_mutex_unlock(&mFrameQueMutex);
+        }
+    }
 }
