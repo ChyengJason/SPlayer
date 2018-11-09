@@ -133,8 +133,11 @@ bool AudioPlayer::pause() {
 }
 
 bool AudioPlayer::play() {
+    int size = 4;
+    char* data = new char[size];
+    memset(data, 0, size);
     SLresult result = (*mPlayer)->SetPlayState(mPlayer, SL_PLAYSTATE_PLAYING);
-    PlayerCallback(mBufferQueueInterface, this);
+    (*mBufferQueueInterface)->Enqueue(mBufferQueueInterface, data, size);
     if (result == SL_RESULT_SUCCESS) {
         isPlaying = true;
         return true;

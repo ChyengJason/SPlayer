@@ -47,8 +47,9 @@ void MediaSynchronizer::start() {
     mAudioDuration = 0;
     mVideoDuration = 0;
     startDecodeThread();
-    mVideoOutput->signalRenderFrame();
-    mAudioOutput->signalRenderFrame();
+    pthread_cond_signal(&mDecoderCond);
+    pthread_cond_signal(&mTextureCond);
+    pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::finish() {
@@ -114,6 +115,8 @@ void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
     mTextureQue->start(mMediaDecoder);
     isSurfaceCreated = true;
     pthread_cond_signal(&mDecoderCond);
+    pthread_cond_signal(&mTextureCond);
+    pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::onSurfaceSizeChanged(int width, int height) {
@@ -128,6 +131,8 @@ void MediaSynchronizer::onSurfaceDestroy() {
     mAudioOutput->finish();
     isSurfaceCreated = false;
     pthread_cond_signal(&mDecoderCond);
+    pthread_cond_signal(&mTextureCond);
+    pthread_cond_signal(&mAudioCond);
 }
 
 TextureFrame *MediaSynchronizer::getTetureFrame() {
@@ -136,14 +141,18 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
     while (textureFrame == NULL) {
         pthread_mutex_lock(&mTextureMutex);
         if (mAudioClock <= 0) { // 音频先播放
+            LOGE("音频先播放 getTetureFrame 进入等待 %lf", mAudioClock);
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
-        }
-        textureFrame = mTextureQue->pop();
-        if (textureFrame == NULL) {
+            LOGE("getTetureFrame唤醒1");
+        } else if ((textureFrame = mTextureQue->pop())== NULL) {
             LOGE("getTetureFrame 进入等待");
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
+            LOGE("getTetureFrame唤醒2");
         }
         pthread_mutex_unlock(&mTextureMutex);
+        if (!mVideoOutput->isRunning()) {
+            break;
+        }
     }
     correctTime(textureFrame);
     pthread_cond_signal(&mDecoderCond);
@@ -162,9 +171,12 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
             pthread_cond_wait(&mAudioCond, &mAudioMutex);
         }
         pthread_mutex_unlock(&mAudioMutex);
-    }
+        if (!mAudioOutput->isRunning()) {
+            break;
+        }
     correctTime(audioFrame);
     pthread_cond_signal(&mDecoderCond);
+	pthread_cond_signal(&mTextureCond);
     return audioFrame;
 }
 

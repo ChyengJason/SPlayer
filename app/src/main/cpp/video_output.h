@@ -32,10 +32,10 @@ public:
     void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    void output(void *frame);
     void postMessage(VideoOutputMessage msg);
-    bool isSurfaceValid();
     void signalRenderFrame();
+
+    bool isRunning();
 
 private:
     void createContextHandler();

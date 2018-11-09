@@ -14,6 +14,7 @@ AudioOutput::~AudioOutput() {
 
 void AudioOutput::start(int channel, int samplerate) {
     AudioPlayer::create(samplerate, channel);
+    AudioPlayer::play();
 }
 
 
