@@ -126,4 +126,14 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
     public void seek(int duration) {
         mVideoPlayer.seek(duration);
     }
+
+    @Override
+    public void pause() {
+        mVideoPlayer.pause();
+    }
+
+    @Override
+    public void resume() {
+        mVideoPlayer.resume();
+    }
 }

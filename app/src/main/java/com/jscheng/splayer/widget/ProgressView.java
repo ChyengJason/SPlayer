@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -13,7 +14,7 @@ import com.jscheng.splayer.R;
 /**
  * Created By Chengjunsen on 2018/11/6
  */
-public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarChangeListener {
+public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarChangeListener, View.OnClickListener {
     private static final String TAG = "ProgressView";
     private int duration;
     private int progress;
@@ -21,6 +22,8 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
     private TextView progressTextView;
     private SeekBar seekBar;
     private View contentView;
+    private Button pauseBtn;
+    private Button resumeBtn;
     private ProgressSeekListener seekListener;
     public ProgressView(Context context) {
         super(context);
@@ -42,8 +45,13 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
         contentView = View.inflate(context, R.layout.progress_view, this);
         durationTextView = contentView.findViewById(R.id.duration_textview);
         progressTextView = contentView.findViewById(R.id.progress_textview);
+        resumeBtn = contentView.findViewById(R.id.progress_resume);
+        pauseBtn = contentView.findViewById(R.id.progress_pause);
         seekBar = contentView.findViewById(R.id.seek_bar);
         seekBar.setOnSeekBarChangeListener(this);
+        pauseBtn.setOnClickListener(this);
+        resumeBtn.setOnClickListener(this);
+        resumeBtn.setVisibility(View.INVISIBLE);
     }
 
     public void setSeekListener(ProgressSeekListener listener) {
@@ -95,8 +103,32 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
         }
     }
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.progress_pause:
+                pauseBtn.setVisibility(View.INVISIBLE);
+                resumeBtn.setVisibility(View.VISIBLE);
+                if (seekListener != null) {
+                    seekListener.pause();
+                }
+                break;
+            case R.id.progress_resume:
+                pauseBtn.setVisibility(View.VISIBLE);
+                resumeBtn.setVisibility(View.INVISIBLE);
+                if (seekListener != null) {
+                    seekListener.resume();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
     public interface ProgressSeekListener{
         void seek(int duration);
+        void pause();
+        void resume();
     }
 
     private String formatDate(int mins, int seconds) {

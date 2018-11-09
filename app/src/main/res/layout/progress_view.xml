@@ -6,13 +6,28 @@
     android:paddingRight="10dp"
     android:paddingLeft="10dp"
     android:background="@color/progress_view_bg">
+    <Button
+        android:id="@+id/progress_pause"
+        android:layout_width="17dp"
+        android:layout_height="17dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentLeft="true"
+        android:background="@mipmap/pause"/>
+    <Button
+        android:id="@+id/progress_resume"
+        android:layout_width="17dp"
+        android:layout_height="17dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentLeft="true"
+        android:background="@mipmap/play"/>
 
     <TextView
         android:id="@+id/progress_textview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:layout_alignParentLeft="true"
+        android:layout_toRightOf="@id/progress_resume"
+        android:layout_marginLeft="5dp"
         android:textColor="@android:color/white"
         android:textSize="10dp"
         android:text="0:00"/>

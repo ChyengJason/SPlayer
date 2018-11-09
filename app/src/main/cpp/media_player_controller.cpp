@@ -25,6 +25,7 @@ void MediaPlayerController::stop() {
 }
 
 void MediaPlayerController::pause() {
+    mSynchronizer->pause();
 }
 
 void MediaPlayerController::seek(float position) {
@@ -35,6 +36,7 @@ void MediaPlayerController::suspend() {
 }
 
 void MediaPlayerController::resume() {
+    mSynchronizer->resume();
 }
 
 float MediaPlayerController::getDuration() {

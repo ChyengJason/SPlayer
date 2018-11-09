@@ -30,6 +30,8 @@ public:
     void start();
     void finish();
     void seek(float);
+    void pause();
+    void resume();
     void onSurfaceCreated(ANativeWindow* window);
     void onSurfaceSizeChanged(int width, int height);
     void onSurfaceDestroy();
@@ -57,6 +59,8 @@ private:
     AudioQueue* mAudioQue;
     VideoOutput *mVideoOutput;
     AudioOutput *mAudioOutput;
+    bool isStarted;
+    bool isPaused;
     long mDuration;
     bool isSurfaceCreated;
     double mVideoClock;

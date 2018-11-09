@@ -38,6 +38,7 @@ MediaSynchronizer::~MediaSynchronizer() {
 void MediaSynchronizer::prepare(const char *path) {
     mMediaDecoder->prepare(path);
     mDuration = mMediaDecoder->getMediaDuration();
+    isStarted = false;
 }
 
 void MediaSynchronizer::start() {
@@ -47,12 +48,16 @@ void MediaSynchronizer::start() {
     mAudioDuration = 0;
     mVideoDuration = 0;
     startDecodeThread();
+    isStarted = true;
+    isPaused = false;
     pthread_cond_signal(&mDecoderCond);
     pthread_cond_signal(&mTextureCond);
     pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::finish() {
+    isStarted = false;
+    isPaused = false;
     mMediaDecoder->finish();
     mAudioQue->finish();
     mTextureQue->finish();
@@ -130,6 +135,7 @@ void MediaSynchronizer::onSurfaceDestroy() {
     mTextureQue->finish();
     mAudioOutput->finish();
     isSurfaceCreated = false;
+    isStarted = false;
     pthread_cond_signal(&mDecoderCond);
     pthread_cond_signal(&mTextureCond);
     pthread_cond_signal(&mAudioCond);
@@ -140,14 +146,9 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
     TextureFrame * textureFrame = NULL;
     while (textureFrame == NULL) {
         pthread_mutex_lock(&mTextureMutex);
-        if (mAudioClock <= 0) { // 音频先播放
-            LOGE("音频先播放 getTetureFrame 进入等待 %lf", mAudioClock);
+        // mAudioClock <= 0 保证音频先播放，视频才有基准时间
+        if (isPaused || mAudioClock <= 0 || (textureFrame = mTextureQue->pop())== NULL) {
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
-            LOGE("getTetureFrame唤醒1");
-        } else if ((textureFrame = mTextureQue->pop())== NULL) {
-            LOGE("getTetureFrame 进入等待");
-            pthread_cond_wait(&mTextureCond, &mTextureMutex);
-            LOGE("getTetureFrame唤醒2");
         }
         pthread_mutex_unlock(&mTextureMutex);
         if (!mVideoOutput->isRunning()) {
@@ -166,7 +167,7 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
     while (audioFrame == NULL) {
         pthread_mutex_lock(&mAudioMutex);
         audioFrame = mAudioQue->pop();
-        if (audioFrame == NULL) {
+        if (isPaused || audioFrame == NULL) {
             LOGE("getAudioFrame 进入等待");
             pthread_cond_wait(&mAudioCond, &mAudioMutex);
         }
@@ -174,6 +175,7 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
         if (!mAudioOutput->isRunning()) {
             break;
         }
+    }
     correctTime(audioFrame);
     pthread_cond_signal(&mDecoderCond);
 	pthread_cond_signal(&mTextureCond);
@@ -181,20 +183,21 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
 }
 
 void MediaSynchronizer::seek(float seconds) {
+    if (isStarted && isSurfaceCreated) {
+        pthread_mutex_lock(&mAudioMutex);
+        mAudioQue->clear();
+        pthread_mutex_unlock(&mAudioMutex);
 
-    pthread_mutex_lock(&mAudioMutex);
-    mAudioQue->clear();
-    pthread_mutex_unlock(&mAudioMutex);
+        pthread_mutex_lock(&mTextureMutex);
+        mTextureQue->clear();
+        pthread_mutex_unlock(&mTextureMutex);
 
-    pthread_mutex_lock(&mTextureMutex);
-    mTextureQue->clear();
-    pthread_mutex_unlock(&mTextureMutex);
+        pthread_mutex_lock(&mDecoderMutex);
+        mMediaDecoder->seek(seconds);
+        pthread_mutex_unlock(&mDecoderMutex);
 
-    pthread_mutex_lock(&mDecoderMutex);
-    mMediaDecoder->seek(seconds);
-    pthread_mutex_unlock(&mDecoderMutex);
-
-    pthread_cond_signal(&mDecoderCond);
+        pthread_cond_signal(&mDecoderCond);
+    }
 }
 
 float MediaSynchronizer::getDuration() {
@@ -243,4 +246,20 @@ void MediaSynchronizer::correctTime(AudioFrame *audioFrame) {
     }
     mAudioDuration = audioFrame->duration;
     mAudioClock = pts;
+}
+
+void MediaSynchronizer::pause() {
+    if (isStarted && isSurfaceCreated && !isPaused) {
+        isPaused = true;
+        pthread_cond_signal(&mDecoderCond);
+        pthread_cond_signal(&mTextureCond);
+    }
+}
+
+void MediaSynchronizer::resume() {
+    if (isStarted && isSurfaceCreated && isPaused) {
+        isPaused = false;
+        pthread_cond_signal(&mDecoderCond);
+        pthread_cond_signal(&mTextureCond);
+    }
 }
