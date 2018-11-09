@@ -240,7 +240,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
     double timestamp;
     double duration;
     int pktSize = packet->size;
-    LOGD("MediaDecoder pktSize %d", pktSize);
+    //LOGD("MediaDecoder pktSize %d", pktSize);
     while (pktSize > 0) {
         //LOGD("开始解码视频帧");
         // 解码图像数据：RGBA格式保存在data[0] ，YUV格式有data[0] data[1] data[2]

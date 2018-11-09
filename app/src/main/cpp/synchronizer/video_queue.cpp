@@ -32,15 +32,11 @@ void VideoQueue::start(MediaDecoder* decoder) {
         createRenderThread();
         postMessage(VIDEOQUEUE_MESSAGE_CREATE);
         isThreadInited = true;
-        isClearing = false;
     }
 }
 
 void VideoQueue::finish()  {
     LOGD("VideoQueue::finish");
-    if (!isThreadInited) {
-        return;
-    }
     mMediaDecoder = NULL;
     isThreadInited = false;
     postMessage(VIDEOQUEUE_MESSAGE_QUIT);
@@ -59,6 +55,9 @@ void VideoQueue::postMessage(VideoQueueMessage msg) {
 }
 
 void VideoQueue::push(AVPacket* packet) {
+    if (!isThreadInited) {
+        return;
+    }
     postMessage(VideoQueueMessage(VIDEOQUEUE_MESSAGE_PUSH, packet));
 }
 
@@ -69,7 +68,7 @@ bool VideoQueue::isEmpty() {
 TextureFrame *VideoQueue::pop() {
     pthread_mutex_lock(&mTextureQueMutex);
     TextureFrame* frame = NULL;
-    if (!isClearing && !mTextureFrameQue.empty()) {
+    if (!mTextureFrameQue.empty()) {
         frame = mTextureFrameQue.front();
         mTextureFrameQue.pop();
         mAllDuration -= frame->duration;
@@ -79,9 +78,26 @@ TextureFrame *VideoQueue::pop() {
 }
 
 void VideoQueue::clear() {
+    LOGD("VideoQueue 开始清空");
     mAllDuration = 0;
-    isClearing = true;
-    postMessage(VIDEOQUEUE_MESSAGE_CLEAR);
+    pthread_mutex_lock(&mMessageQueMutex);
+    pthread_mutex_lock(&mTextureQueMutex);
+    while (!mHandlerMessageQueue.empty()) {
+        VideoQueueMessage message = mHandlerMessageQueue.front();
+        mHandlerMessageQueue.pop();
+        if (message.msgType == VIDEOQUEUE_MESSAGE_PUSH) {
+            delete(message.value);
+        }
+    }
+
+    while (!mTextureFrameQue.empty()) {
+        TextureFrame* textureFrame = mTextureFrameQue.front();
+        mTextureFrameQue.pop();
+        delete(textureFrame);
+    }
+    pthread_mutex_unlock(&mTextureQueMutex);
+    pthread_mutex_unlock(&mMessageQueMutex);
+    LOGD("VideoQueue 完成清空");
 }
 
 int VideoQueue::size() {
@@ -218,25 +234,7 @@ void VideoQueue::renderHandler(void* packet) {
 }
 
 void VideoQueue::clearHandler() {
-    LOGD("VideoQueue::clearHandler");
-    pthread_mutex_lock(&mMessageQueMutex);
-    while (!mHandlerMessageQueue.empty()) {
-        VideoQueueMessage message = mHandlerMessageQueue.front();
-        mHandlerMessageQueue.pop();
-        if (message.msgType == VIDEOQUEUE_MESSAGE_PUSH) {
-            delete(message.value);
-        }
-    }
-    pthread_mutex_unlock(&mMessageQueMutex);
 
-    pthread_mutex_lock(&mTextureQueMutex);
-    while (!mTextureFrameQue.empty()) {
-        TextureFrame* textureFrame = mTextureFrameQue.front();
-        mTextureFrameQue.pop();
-        delete(textureFrame);
-    }
-    pthread_mutex_unlock(&mTextureQueMutex);
-    isClearing = false;
 }
 
 double VideoQueue::getAllDuration() {

@@ -34,6 +34,7 @@ private:
     pthread_mutex_t mPacketMutex;
     pthread_cond_t mDecodeCond;
     pthread_t mDecodeThread;
+    pthread_mutex_t mDecodeMutex;
     std::queue<AVPacket*> mPacketQue;
     std::queue<AudioFrame*> mAudioFrameQue;
     double mAllDuration;

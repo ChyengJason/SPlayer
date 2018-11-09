@@ -77,10 +77,7 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
 
     @Override
     public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
-        if (fromUser && seekListener != null) {
-            Log.e(TAG, "onProgressChanged: " + i );
-            seekListener.seek(i);
-        }
+
     }
 
     @Override
@@ -91,6 +88,11 @@ public class ProgressView extends RelativeLayout implements SeekBar.OnSeekBarCha
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
         seekBar.setThumb(getContext().getDrawable(R.drawable.progress_thumb_normal));
+        if (seekListener != null) {
+            int progress = seekBar.getProgress();
+            Log.e(TAG, "onProgressChanged: " + progress );
+            seekListener.seek(progress);
+        }
     }
 
     public interface ProgressSeekListener{
