@@ -24,10 +24,13 @@ public:
     bool isRunning();
     double getAllDuration();
     int packetCacheSize();
+    bool clearing();
 
 private:
     static void* runDecode(void* self);
     void runDecodeImpl();
+    void runClearing();
+    void runDecoding();
 
 private:
     bool isFinish;
@@ -40,6 +43,7 @@ private:
     std::queue<AudioFrame*> mAudioFrameQue;
     double mAllDuration;
     MediaDecoder* mMediaDecoder;
+    bool isClearing;
 };
 
 

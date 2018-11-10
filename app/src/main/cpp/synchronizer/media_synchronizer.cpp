@@ -55,6 +55,7 @@ void MediaSynchronizer::start() {
     isStarted = true;
     isPaused = false;
     isSeeking = false;
+    isDecodeFinish = false;
     startDecodeThread();
     pthread_cond_signal(&mDecoderCond);
     pthread_cond_signal(&mTextureCond);
@@ -65,6 +66,7 @@ void MediaSynchronizer::finish() {
     isStarted = false;
     isPaused = false;
     isSeeking = false;
+    isDecodeFinish = false;
     seekSeconds = 0;
     mMediaDecoder->finish();
     mAudioQue->finish();
@@ -87,33 +89,20 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-    bool isDecodeFinish = false;
+
+    isDecodeFinish = false;
     while (isStarted) {
         LOGD("rundecoding audioCacheSize %d, videoCacheSize %d", mAudioQue->packetCacheSize(), mVideoQue->packetCacheSize());
         LOGD("rundecoding audioSize %d, videoSize %d", mAudioQue->size(), mVideoQue->size());
-
         if (!isSurfaceCreated) { // surface未创建
-            LOGE("rundecoding isSurfaceCreated 进入等待");
             pthread_mutex_lock(&mDecoderMutex);
             pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
             pthread_mutex_unlock(&mDecoderMutex);
-            LOGE("rundecoding isSurfaceCreated 唤醒");
         } else if (isSeeking) { // 指定进度
-            pthread_mutex_lock(&mDecoderMutex);
-            pthread_mutex_lock(&mAudioMutex);
-            pthread_mutex_lock(&mTextureMutex);
-            mAudioClock = 0;
-            mVideoClock = 0;
-            mMediaDecoder->seek(seekSeconds);
-            seekSeconds = 0;
-            isDecodeFinish = false;
-            mAudioQue->clear();
-            mVideoQue->clear();
-            pthread_mutex_unlock(&mTextureMutex);
-            pthread_mutex_unlock(&mAudioMutex);
-            pthread_mutex_unlock(&mDecoderMutex);
-            isSeeking = false;
-            LOGE("MediaSynchronizer seek 完成");
+            runSeeking();
+        } else if (isPaused) {
+            pthread_cond_signal(&mAudioCond);
+            pthread_cond_signal(&mTextureCond);
         } else if ((mAudioQue->packetCacheSize() >= MAX_CACHE_PACKET_SIZE || mAudioQue->getAllDuration() > MAX_BUFFER_DURATION) &&
                 (mVideoQue->packetCacheSize() >= MAX_CACHE_PACKET_SIZE || mVideoQue->getAllDuration() > MAX_BUFFER_DURATION)) {
             if (mAudioQue->getAllDuration() > 0 && mVideoQue->getAllDuration() > 0) {
@@ -129,6 +118,8 @@ void MediaSynchronizer::runDecoding() {
             }
         }
     }
+    pthread_cond_signal(&mTextureCond);
+    pthread_cond_signal(&mAudioCond);
 }
 
 bool MediaSynchronizer::decodeFrame() {
@@ -137,11 +128,11 @@ bool MediaSynchronizer::decodeFrame() {
     if ((packet = mMediaDecoder->readFrame()) == NULL) {
         result = false;
     } else if (mMediaDecoder->isVideoPacket(packet)) {
-        LOGE("rundecoding decodeFrame mTextureQue");
+        //LOGE("rundecoding decodeFrame mTextureQue");
         mVideoQue->push(packet);
         result = true;
     } else if (mMediaDecoder->isAudioPacket(packet)){
-        LOGE("rundecoding decodeFrame mAudioQue");
+        //LOGE("rundecoding decodeFrame mAudioQue");
         mAudioQue->push(packet);
         result = true;
     }
@@ -152,15 +143,11 @@ void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
     mVideoOutput->onCreated(mwindow);
     isSurfaceCreated = true;
     pthread_cond_signal(&mDecoderCond);
-    pthread_cond_signal(&mTextureCond);
-    pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::onSurfaceSizeChanged(int width, int height) {
     mVideoOutput->onChangeSize(width, height);
     pthread_cond_signal(&mDecoderCond);
-    pthread_cond_signal(&mTextureCond);
-    pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::onSurfaceDestroy() {
@@ -172,59 +159,58 @@ void MediaSynchronizer::onSurfaceDestroy() {
     isSurfaceCreated = false;
     isStarted = false;
     pthread_cond_signal(&mDecoderCond);
-    pthread_cond_signal(&mTextureCond);
-    pthread_cond_signal(&mAudioCond);
 }
 
 VideoFrame *MediaSynchronizer::getVideoFrame() {
     // 在Video渲染线程获取，不会阻塞主线程
+    pthread_mutex_lock(&mTextureMutex);
     VideoFrame * videoFrame = NULL;
     while (videoFrame == NULL) {
-        pthread_mutex_lock(&mTextureMutex);
+        if (!mVideoOutput->isRunning()) {
+            break;
+        }
         // mAudioClock <= 0 保证音频先播放，视频才有基准时间
         if (isSeeking || isPaused || mAudioClock <= 0 || (videoFrame = mVideoQue->pop())== NULL) {
             LOGE("getVideoFrame 进入等待");
             pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
         }
-        pthread_mutex_unlock(&mTextureMutex);
-        if (!mVideoOutput->isRunning()) {
-            break;
+        if (videoFrame != NULL) {
+            correctTime(videoFrame);
         }
     }
-    correctTime(videoFrame);
+    pthread_mutex_unlock(&mTextureMutex);
     pthread_cond_signal(&mDecoderCond);
     return videoFrame;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
     // 在Audio渲染线程获取，不会阻塞主线程
+    pthread_mutex_lock(&mAudioMutex);
     AudioFrame* audioFrame = NULL;
     while (audioFrame == NULL) {
-        pthread_mutex_lock(&mAudioMutex);
+        if (!mAudioOutput->isRunning()) {
+            break;
+        }
         if (isSeeking || isPaused || (audioFrame = mAudioQue->pop()) == NULL) {
             LOGE("getAudioFrame 进入等待");
             pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mAudioCond, &mAudioMutex);
         }
-        pthread_mutex_unlock(&mAudioMutex);
-        if (!mAudioOutput->isRunning()) {
-            break;
+        if (audioFrame != NULL) {
+            correctTime(audioFrame);
         }
     }
-    correctTime(audioFrame);
+    pthread_mutex_unlock(&mAudioMutex);
     pthread_cond_signal(&mDecoderCond);
-	pthread_cond_signal(&mTextureCond);
     return audioFrame;
 }
 
 void MediaSynchronizer::seek(float seconds) {
-    if (isStarted && isSurfaceCreated) {
+    if (!isSeeking && isStarted && isSurfaceCreated) {
         isSeeking = true;
         seekSeconds = seconds;
         pthread_cond_signal(&mDecoderCond);
-        pthread_cond_signal(&mTextureCond);
-        pthread_cond_signal(&mAudioCond);
     }
 }
 
@@ -280,8 +266,6 @@ void MediaSynchronizer::pause() {
     if (isStarted && isSurfaceCreated && !isPaused) {
         isPaused = true;
         pthread_cond_signal(&mDecoderCond);
-        pthread_cond_signal(&mTextureCond);
-        pthread_cond_signal(&mAudioCond);
     }
 }
 
@@ -289,7 +273,27 @@ void MediaSynchronizer::resume() {
     if (isStarted && isSurfaceCreated && isPaused) {
         isPaused = false;
         pthread_cond_signal(&mDecoderCond);
-        pthread_cond_signal(&mTextureCond);
-        pthread_cond_signal(&mAudioCond);
     }
+}
+
+void MediaSynchronizer::runSeeking() {
+    pthread_mutex_lock(&mDecoderMutex);
+    pthread_mutex_lock(&mAudioMutex);
+    pthread_mutex_lock(&mTextureMutex);
+    mAudioClock = 0;
+    mVideoClock = 0;
+    mMediaDecoder->seek(seekSeconds);
+    seekSeconds = 0;
+    isDecodeFinish = false;
+    mAudioQue->clear();
+    mVideoQue->clear();
+    while (mAudioQue->clearing() || mVideoQue->clearing()) {
+        usleep(20* 1000);
+    }
+    pthread_mutex_unlock(&mTextureMutex);
+    pthread_mutex_unlock(&mAudioMutex);
+    pthread_mutex_unlock(&mDecoderMutex);
+    isSeeking = false;
+    LOGE("MediaSynchronizer seek 完成");
+    pthread_cond_signal(&mDecoderCond);
 }

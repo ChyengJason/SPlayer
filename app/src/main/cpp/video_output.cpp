@@ -74,16 +74,13 @@ void VideoOutput::runHandlerImpl() {
 }
 
 void VideoOutput::createContextHandler() {
-    LOGD(" VideoOutput::createContextHandler");
     mContext = mEglCore.createGL(EGL_NO_CONTEXT);
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface, mContext);
     mGlRender.onCreated();
-    LOGD(" VideoOutput::createEglContextHandler finish");
 }
 
 void VideoOutput::releaseContextHandler() {
-    LOGD("VideoOutput destroySurfaceHandler");
     mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
@@ -92,7 +89,6 @@ void VideoOutput::releaseContextHandler() {
     mNativeWindow = NULL;
     isDestroy = true;
     isCreated = false;
-    LOGD(" VideoOutput::destroySurfaceHandler finish");
 }
 
 void VideoOutput::renderVideoFrameHandler(VideoFrame *videoFrame) {
@@ -102,7 +98,6 @@ void VideoOutput::renderVideoFrameHandler(VideoFrame *videoFrame) {
     }
     mEglCore.makeCurrent(mSurface, mContext);
     if (!videoFrame->isSkip) {
-        LOGE("VideoOutput 渲染videoFrame: %lf %lu", videoFrame->timestamp, (unsigned long)pthread_self());
         mGlRender.onDraw(videoFrame);
         mEglCore.swapBuffers(mSurface);
         LOGE("VideoOutput 渲染videoFrame完成: %lf %lu", videoFrame->timestamp, (unsigned long)pthread_self());

@@ -262,7 +262,7 @@ std::vector<VideoFrame*> MediaDecoder::decodeVideoFrame(AVPacket* packet) {
                 duration = 1.0 / packet->pts;
             }
             VideoFrame *videoFrame = createVideoFrame(timestamp, duration, newFrame);
-            LOGD("解码视频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
+            //LOGD("解码视频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
             vec.push_back(videoFrame);
         }
         if (0 == len) {
@@ -307,7 +307,7 @@ std::vector<AudioFrame*> MediaDecoder::decodeAudioFrame(AVPacket* packet) {
             double timestamp = r2d(audioStream->time_base) * packet->pts;
             double duration = av_frame_get_pkt_duration(mAudioFrame) * r2d(audioStream->time_base);
             AudioFrame* audioFrame = createAudioFrame(timestamp, duration, size, mAudioOutBuffer);
-            LOGD("解码音频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
+            //LOGD("解码音频：time : %lf, duration : %lf packt->pts ：%ld ", timestamp, duration, packet->pts);
             if(audioFrame) audioFrames.push_back(audioFrame);
             av_free_packet(packet);
         }

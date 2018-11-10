@@ -7,18 +7,19 @@
 
 AudioQueue::AudioQueue()
         : isFinish(true)
+        , isClearing(false)
         , mMediaDecoder(NULL){
     pthread_mutex_init(&mFrameQueMutex, NULL);
     pthread_mutex_init(&mPacketMutex, NULL);
-    pthread_mutex_init(&mDecodeMutex, NULL);
-    pthread_cond_init(&mDecodeCond, NULL);
+//    pthread_mutex_init(&mDecodeMutex, NULL);
+//    pthread_cond_init(&mDecodeCond, NULL);
 }
 
 AudioQueue::~AudioQueue() {
     pthread_mutex_destroy(&mPacketMutex);
     pthread_mutex_destroy(&mFrameQueMutex);
-    pthread_mutex_destroy(&mDecodeMutex);
-    pthread_cond_destroy(&mDecodeCond);
+//    pthread_mutex_destroy(&mDecodeMutex);
+//    pthread_cond_destroy(&mDecodeCond);
     mMediaDecoder = NULL;
 }
 
@@ -34,7 +35,7 @@ void AudioQueue::push(AVPacket* packet) {
     pthread_mutex_lock(&mPacketMutex);
     mPacketQue.push(packet);
     pthread_mutex_unlock(&mPacketMutex);
-    pthread_cond_signal(&mDecodeCond);
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 AudioFrame *AudioQueue::pop() {
@@ -50,26 +51,8 @@ AudioFrame *AudioQueue::pop() {
 }
 
 void AudioQueue::clear() {
-    mAllDuration = 0;
-    LOGD("AuidoQueue 开始清空");
-    pthread_mutex_lock(&mDecodeMutex);
-    pthread_mutex_lock(&mFrameQueMutex);
-    while(!mAudioFrameQue.empty()) {
-        AudioFrame* audioFrame = mAudioFrameQue.front();
-        mAudioFrameQue.pop();
-        delete(audioFrame);
-    }
-    pthread_mutex_unlock(&mFrameQueMutex);
-
-    pthread_mutex_lock(&mPacketMutex);
-    while(!mPacketQue.empty()) {
-        AVPacket* packet = mPacketQue.front();
-        mPacketQue.pop();
-        mMediaDecoder->freePacket(packet);
-    }
-    pthread_mutex_unlock(&mPacketMutex);
-    pthread_mutex_unlock(&mDecodeMutex);
-    LOGD("AuidoQueue 完成清空");
+    isClearing = true;
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 int AudioQueue::size() {
@@ -81,9 +64,8 @@ bool AudioQueue::isEmpty() {
 }
 
 void AudioQueue::finish() {
-    clear();
     isFinish = true;
-    pthread_cond_signal(&mDecodeCond);
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 bool AudioQueue::isRunning() {
@@ -103,29 +85,59 @@ void* AudioQueue::runDecode(void *self) {
 void AudioQueue::runDecodeImpl() {
     isFinish = false;
     while (!isFinish) {
-        pthread_mutex_lock(&mDecodeMutex);
-        if (mPacketQue.empty()) {
-            pthread_cond_wait(&mDecodeCond, &mDecodeMutex);
-
+        if (isClearing) {
+            runClearing();
         } else if (mMediaDecoder != NULL) {
-            pthread_mutex_lock(&mPacketMutex);
-            AVPacket* packet = mPacketQue.front();
-            mPacketQue.pop();
-            pthread_mutex_unlock(&mPacketMutex);
-
-            std::vector<AudioFrame*> frames = mMediaDecoder->decodeAudioFrame(packet);
-            mMediaDecoder->freePacket(packet);
-            pthread_mutex_lock(&mFrameQueMutex);
-            for (int i = 0; i < frames.size(); ++i) {
-                mAudioFrameQue.push(frames[i]);
-                mAllDuration += frames[i]->duration;
-            }
-            pthread_mutex_unlock(&mFrameQueMutex);
+            runDecoding();
         }
-        pthread_mutex_unlock(&mDecodeMutex);
     }
+    runClearing();
 }
 
 int AudioQueue::packetCacheSize() {
     return mPacketQue.size();
+}
+
+void AudioQueue::runClearing() {
+    LOGD("AudioQueue 开始清空");
+    pthread_mutex_lock(&mFrameQueMutex);
+    pthread_mutex_lock(&mPacketMutex);
+    while(!mAudioFrameQue.empty()) {
+        AudioFrame* audioFrame = mAudioFrameQue.front();
+        mAudioFrameQue.pop();
+        delete(audioFrame);
+    }
+    while(!mPacketQue.empty()) {
+        AVPacket* packet = mPacketQue.front();
+        mPacketQue.pop();
+        mMediaDecoder->freePacket(packet);
+    }
+    isClearing = false;
+    mAllDuration = 0;
+    pthread_mutex_unlock(&mPacketMutex);
+    pthread_mutex_unlock(&mFrameQueMutex);
+    LOGD("AudioQueue 完成清空");
+}
+
+void AudioQueue::runDecoding() {
+    std::vector<AudioFrame*> frames;
+    pthread_mutex_lock(&mPacketMutex);
+    if (!mPacketQue.empty()) {
+        AVPacket* packet = mPacketQue.front();
+        mPacketQue.pop();
+        frames = mMediaDecoder->decodeAudioFrame(packet);
+        mMediaDecoder->freePacket(packet);
+    }
+    pthread_mutex_unlock(&mPacketMutex);
+
+    pthread_mutex_lock(&mFrameQueMutex);
+    for (int i = 0; i < frames.size(); ++i) {
+        mAudioFrameQue.push(frames[i]);
+        mAllDuration += frames[i]->duration;
+    }
+    pthread_mutex_unlock(&mFrameQueMutex);
+}
+
+bool AudioQueue::clearing() {
+    return isClearing;
 }

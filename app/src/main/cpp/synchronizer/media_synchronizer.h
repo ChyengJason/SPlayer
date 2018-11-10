@@ -17,7 +17,7 @@ const float MAX_BUFFER_DURATION = 0.3;
 const float MAX_FRAME_DIFF = 0.002;
 const float MAX_JUDGE_DIFF = 1.0;
 const float MIN_BUFFER_DURATION = 0.1;
-const float MAX_CACHE_PACKET_SIZE = 50;
+const float MAX_CACHE_PACKET_SIZE = 30;
 
 /**
  * 负责同步音视频
@@ -66,11 +66,14 @@ private:
     bool isSeeking;
     long mDuration;
     bool isSurfaceCreated;
+    bool isDecodeFinish;
     double mVideoClock;
     double mAudioClock;
     double mVideoDuration;
     double mAudioDuration;
     long seekSeconds;
+
+    void runSeeking();
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

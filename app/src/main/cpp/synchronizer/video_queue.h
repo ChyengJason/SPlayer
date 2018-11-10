@@ -22,10 +22,12 @@ public:
     int size();
     bool isRunning();
     double getAllDuration();
-
+    bool clearing();
 private:
     static void* runDecode(void* self);
     void runDecodeImpl();
+    void runClearing();
+    void runDecoding();
 
 private:
     bool isFinish;
@@ -38,6 +40,7 @@ private:
     std::queue<VideoFrame*> mVideoFrameQue;
     double mAllDuration;
     MediaDecoder* mMediaDecoder;
+    bool isClearing;
 };
 
 
