@@ -113,7 +113,6 @@ void GlYuvRender::onDraw(const VideoFrame* videoFrame) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaB);
     glUniform1i(textureUHandle, 1);
 
-
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, textureV);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, videoFrame->frameWidth/2, videoFrame->frameHeight/2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame->chromaR);

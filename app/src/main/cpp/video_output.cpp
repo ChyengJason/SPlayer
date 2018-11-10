@@ -11,178 +11,116 @@ extern "C" {
 }
 
 VideoOutput::VideoOutput(IVideoOutput *callback) {
-    pthread_mutex_init(&mRenderMutex, NULL);
-    pthread_mutex_init(&mMessageMutex, NULL);
-    pthread_cond_init(&mRenderCond, NULL);
     mNativeWindow = NULL;
     mSurface = EGL_NO_SURFACE;
     mContext = EGL_NO_CONTEXT;
-    isThreadInited = false;
+    isCreated = false;
+    isChangeSized = false;
+    isDestroy = false;
     mOutputInterface = callback;
+    screenWidth = 0;
+    screenHeight = 0;
 }
 
 VideoOutput::~VideoOutput() {
-    pthread_cond_destroy(&mRenderCond);
-    pthread_mutex_destroy(&mRenderMutex);
-    pthread_mutex_destroy(&mMessageMutex);
     mOutputInterface = NULL;
 }
 
 void VideoOutput::onCreated(ANativeWindow *nativeWindow) {
-    if (!isThreadInited) {
-        LOGD("VideoOutput onCreated 当前主线程：%lu size %d", (unsigned long)pthread_self(), mMessageQueue.size());
-        mNativeWindow = nativeWindow;
-        createRenderHandlerThread();
-        isThreadInited = true;
-        postMessage(MESSAGE_CREATE_CONTEXT);
-        postMessage(MESSAGE_RENDER);
-    }
+    mNativeWindow = nativeWindow;
+    createRunThread();
+    isCreated = true;
+    isDestroy = false;
 }
 
-void VideoOutput::onChangeSize(int screenWidth, int screenHeight) {
-    LOGE("VideoOutput chagesize");
-    if (!isThreadInited) {
-        return;
-    }
-    this->screenHeight = screenHeight;
-    this->screenWidth = screenWidth;
-    postMessage(MESSAGE_CHANGE_SIZE);
+void VideoOutput::onChangeSize(int width, int height) {
+    screenWidth = width;
+    screenHeight = height;
+    isChangeSized = true;
 }
 
 void VideoOutput::onDestroy() {
-    LOGE("VideoOutput onDestroy");
-    if (!isThreadInited) {
-        return;
-    }
-    isThreadInited = false;
-    postMessage(MESSAGE_QUIT);
-    pthread_detach(mRenderHandlerThread);
+    isDestroy = true;
+    isCreated = false;
 }
 
-void VideoOutput::createRenderHandlerThread() {
-    int ret = pthread_create(&mRenderHandlerThread, NULL, renderHandlerThread, this);
+bool VideoOutput::isRunning() {
+    return isCreated && !isDestroy;
+}
+
+void VideoOutput::createRunThread() {
+    int ret = pthread_create(&mRenderHandlerThread, NULL, runHandler, this);
     if (ret < 0) {
-        LOGE("createRenderHandlerThread fail");
+        LOGE("VideoOutput createRunThread fail");
     }
 }
 
-void VideoOutput::signalRenderFrame() {
-    postMessage(MESSAGE_RENDER);
-}
-
-void *VideoOutput::renderHandlerThread(void *self) {
+void *VideoOutput::runHandler(void *self) {
     VideoOutput* mOutput = (VideoOutput*) self;
-    // handler处理消息
-    mOutput->processMessages();
+    mOutput->runHandlerImpl();
     pthread_exit(0);
     return NULL;
 }
 
-void VideoOutput::postMessage(VideoOutputMessage msg) {
-    pthread_mutex_lock(&mMessageMutex);
-    mMessageQueue.push(msg);
-    LOGE("mMessageQueue.push %d",msg);
-    pthread_mutex_unlock(&mMessageMutex);
-    pthread_cond_signal(&mRenderCond);
-}
-
-void VideoOutput::processMessages() {
-    bool isQuited = true;
-    while (isQuited) {
-        int lockCode = pthread_mutex_lock(&mRenderMutex);
-        if (lockCode != 0) {
-            LOGE("VideoOutput processMessages 失败");
-            return ;
-        }
-
-        if (mMessageQueue.empty()) {
-            LOGE("VideoOutput MESSAGE 等待");
-            pthread_cond_wait(&mRenderCond, &mRenderMutex);
-            LOGE("VideoOutput MESSAGE 结束唤醒 %d", mMessageQueue.size());
-            pthread_mutex_unlock(&mRenderMutex);
-            continue;
-        }
-
-        pthread_mutex_lock(&mMessageMutex);
-        VideoOutputMessage msg = mMessageQueue.front();
-        mMessageQueue.pop();
-        pthread_mutex_unlock(&mMessageMutex);
-        LOGE("VideoOutput message: %d", msg);
-        switch (msg) {
-            case MESSAGE_CREATE_CONTEXT:
-                createContextHandler();
-                break;
-            case MESSAGE_RENDER:
-                renderTextureHandler();
-                break;
-            case MESSAGE_CHANGE_SIZE:
-                changeSizeHanlder();
-                break;
-            case MESSAGE_QUIT:
-                releaseRenderHanlder();
-                isQuited = false;
-                break;
-            default:
-                break;
-        }
-        pthread_mutex_unlock(&mRenderMutex);
+void VideoOutput::runHandlerImpl() {
+    createContextHandler();
+    changeSizeHandler();
+    while (!isDestroy) {
+        VideoFrame* videoFrame = mOutputInterface->getVideoFrame(); // 会阻塞
+        renderVideoFrameHandler(videoFrame);
     }
-    LOGD("VideoOutput processMessages 结束");
+    releaseContextHandler();
     pthread_exit(0);
 }
 
 void VideoOutput::createContextHandler() {
-    EglShareContext::getInstance().lock();
-    mContext = mEglCore.createGL(EglShareContext::getInstance().getShareContext());
-    EglShareContext::getInstance().setShareContext(mContext);
-    EglShareContext::getInstance().unlock();
+    LOGD(" VideoOutput::createContextHandler");
+    mContext = mEglCore.createGL(EGL_NO_CONTEXT);
     mSurface = mEglCore.createWindowSurface(mNativeWindow);
     mEglCore.makeCurrent(mSurface, mContext);
     mGlRender.onCreated();
     LOGD(" VideoOutput::createEglContextHandler finish");
 }
 
-void VideoOutput::releaseRenderHanlder() {
+void VideoOutput::releaseContextHandler() {
     LOGD("VideoOutput destroySurfaceHandler");
     mGlRender.onDestroy();
     mEglCore.destroySurface(mSurface);
     mSurface = EGL_NO_SURFACE;
     mEglCore.destroyGL(mContext);
-    EglShareContext::getInstance().clearShareContext();
     ANativeWindow_release(mNativeWindow);
     mNativeWindow = NULL;
-
-    pthread_mutex_lock(&mMessageMutex);
-    while (!mMessageQueue.empty()) {
-        mMessageQueue.pop();
-    }
-    pthread_mutex_unlock(&mMessageMutex);
+    isDestroy = true;
+    isCreated = false;
+    LOGD(" VideoOutput::destroySurfaceHandler finish");
 }
 
-void VideoOutput::renderTextureHandler() {
-    TextureFrame* textureFrame = mOutputInterface->getTetureFrame();
-    if (textureFrame == NULL) {
-        LOGE("renderTextureHandler 为空");
+void VideoOutput::renderVideoFrameHandler(VideoFrame *videoFrame) {
+    if (videoFrame == NULL) {
+        LOGE("VideoOutput renderVideoHandler 为空");
         return;
     }
     mEglCore.makeCurrent(mSurface, mContext);
-    if (!textureFrame->isSkip) {
-        LOGD("VideoOutput 渲染纹理 %d，屏幕尺寸 %d x %d", textureFrame->textureId, screenWidth, screenHeight);
-        mGlRender.onDraw(textureFrame->textureId);
+    if (!videoFrame->isSkip) {
+        LOGE("VideoOutput 渲染videoFrame: %lf %lu", videoFrame->timestamp, (unsigned long)pthread_self());
+        mGlRender.onDraw(videoFrame);
         mEglCore.swapBuffers(mSurface);
+        LOGE("VideoOutput 渲染videoFrame完成: %lf %lu", videoFrame->timestamp, (unsigned long)pthread_self());
     } else {
-        LOGE("videouOutput 跳帧");
+        LOGE("VideoOutput 跳帧");
     }
-    GlRenderUtil::deleteTexture(textureFrame->textureId);
-    delete textureFrame;
+    delete videoFrame;
 }
 
-void VideoOutput::changeSizeHanlder() {
-    LOGD("VideoOutput changeSizeHanlder");
+void VideoOutput::changeSizeHandler() {
+    screenWidth = ANativeWindow_getWidth(mNativeWindow);
+    screenHeight = ANativeWindow_getHeight(mNativeWindow);
+    mEglCore.makeCurrent(mSurface, mContext);
     mGlRender.onChangeSize(screenWidth, screenHeight);
+    LOGD("VideoOutput changeSizeHanlder %dx%d", screenWidth, screenHeight);
 }
 
-bool VideoOutput::isRunning() {
-    return isThreadInited;
-}
+
+
+
 

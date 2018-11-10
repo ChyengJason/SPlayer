@@ -13,9 +13,11 @@
 #include "../video_output.h"
 #include "../audio_output.h"
 
-const float MAX_BUFFER_DURATION = 0.2;
+const float MAX_BUFFER_DURATION = 0.3;
 const float MAX_FRAME_DIFF = 0.002;
 const float MAX_JUDGE_DIFF = 1.0;
+const float MIN_BUFFER_DURATION = 0.1;
+const float MAX_CACHE_PACKET_SIZE = 50;
 
 /**
  * 负责同步音视频
@@ -24,7 +26,7 @@ class MediaSynchronizer : public virtual IVideoOutput, public virtual IAudioOutp
 public:
     MediaSynchronizer();
     virtual ~MediaSynchronizer();
-    virtual TextureFrame* getTetureFrame();
+    virtual VideoFrame* getVideoFrame();
     virtual AudioFrame* getAudioFrame();
     void prepare(const char* path);
     void start();
@@ -43,7 +45,7 @@ private:
     static void* runDecoderThread(void* self);
     void runDecoding();
     bool decodeFrame();
-    void correctTime(TextureFrame *textureFrame);
+    void correctTime(VideoFrame *videoFrame);
     void correctTime(AudioFrame *audioFrame);
 
 private:
@@ -55,18 +57,20 @@ private:
     pthread_mutex_t mTextureMutex;
     pthread_cond_t mAudioCond;
     pthread_mutex_t mAudioMutex;
-    VideoQueue* mTextureQue;
+    VideoQueue* mVideoQue;
     AudioQueue* mAudioQue;
     VideoOutput *mVideoOutput;
     AudioOutput *mAudioOutput;
     bool isStarted;
     bool isPaused;
+    bool isSeeking;
     long mDuration;
     bool isSurfaceCreated;
     double mVideoClock;
     double mAudioClock;
     double mVideoDuration;
     double mAudioDuration;
+    long seekSeconds;
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H

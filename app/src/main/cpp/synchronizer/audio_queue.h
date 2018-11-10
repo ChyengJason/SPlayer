@@ -23,6 +23,7 @@ public:
     int size();
     bool isRunning();
     double getAllDuration();
+    int packetCacheSize();
 
 private:
     static void* runDecode(void* self);

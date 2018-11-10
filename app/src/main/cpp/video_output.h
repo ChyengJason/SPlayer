@@ -12,17 +12,10 @@
 #include "render/gl_yuv_render.h"
 #include <queue>
 
-enum VideoOutputMessage{
-    MESSAGE_CREATE_CONTEXT,
-    MESSAGE_QUIT,
-    MESSAGE_RENDER,
-    MESSAGE_CHANGE_SIZE
-};
-
 class IVideoOutput {
 public:
     virtual ~IVideoOutput() {}
-    virtual TextureFrame* getTetureFrame() = 0;
+    virtual VideoFrame* getVideoFrame() = 0;
 };
 
 class VideoOutput{
@@ -32,33 +25,29 @@ public:
     void onCreated(ANativeWindow *nativeWindow);
     void onChangeSize(int screenWidth, int screenHeigth);
     void onDestroy();
-    void postMessage(VideoOutputMessage msg);
-    void signalRenderFrame();
-
     bool isRunning();
 
 private:
+    void createRunThread();
+    static void* runHandler(void *self);
+    void runHandlerImpl();
     void createContextHandler();
-    void createRenderHandlerThread();
-    void releaseRenderHanlder();
-    void renderTextureHandler();
-    void changeSizeHanlder();
-    void processMessages();
-    static void* renderHandlerThread(void* self);
+    void releaseContextHandler();
+    void renderVideoFrameHandler(VideoFrame* frame);
+    void changeSizeHandler();
+
 private:
     ANativeWindow *mNativeWindow;
     EglCore mEglCore;
-    GlBaseRender mGlRender;
+    GlYuvRender mGlRender;
     EGLContext  mContext;
     EGLSurface mSurface;
     int screenWidth;
     int screenHeight;
     pthread_t mRenderHandlerThread;
-    pthread_mutex_t mRenderMutex;
-    pthread_cond_t mRenderCond;
-    std::queue<VideoOutputMessage> mMessageQueue;
-    pthread_mutex_t mMessageMutex;
-    bool isThreadInited;
+    bool isCreated;
+    bool isChangeSized;
+    bool isDestroy;
     IVideoOutput* mOutputInterface;
 };
 

@@ -12,7 +12,7 @@ MediaSynchronizer::MediaSynchronizer() {
     pthread_mutex_init(&mAudioMutex, NULL);
     mMediaDecoder = new MediaDecoder;
     mAudioQue = new AudioQueue;
-    mTextureQue = new VideoQueue;
+    mVideoQue = new VideoQueue;
     mVideoOutput = new VideoOutput(this);
     mAudioOutput = new AudioOutput(this);
     mDuration = 0;
@@ -20,6 +20,8 @@ MediaSynchronizer::MediaSynchronizer() {
     mVideoClock = 0;
     mAudioDuration = 0;
     mVideoDuration = 0;
+    seekSeconds = 0;
+    isSeeking = false;
     isSurfaceCreated = false;
 }
 
@@ -30,7 +32,7 @@ MediaSynchronizer::~MediaSynchronizer() {
     pthread_cond_destroy(&mAudioCond);
     delete(mMediaDecoder);
     delete(mAudioQue);
-    delete(mTextureQue);
+    delete(mVideoQue);
     delete(mVideoOutput);
     delete(mAudioOutput);
 }
@@ -42,14 +44,18 @@ void MediaSynchronizer::prepare(const char *path) {
 }
 
 void MediaSynchronizer::start() {
+    mAudioQue->start(mMediaDecoder);
+    mVideoQue->start(mMediaDecoder);
     mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
     mAudioClock = 0;
     mVideoClock = 0;
     mAudioDuration = 0;
     mVideoDuration = 0;
-    startDecodeThread();
+    seekSeconds = 0;
     isStarted = true;
     isPaused = false;
+    isSeeking = false;
+    startDecodeThread();
     pthread_cond_signal(&mDecoderCond);
     pthread_cond_signal(&mTextureCond);
     pthread_cond_signal(&mAudioCond);
@@ -58,9 +64,11 @@ void MediaSynchronizer::start() {
 void MediaSynchronizer::finish() {
     isStarted = false;
     isPaused = false;
+    isSeeking = false;
+    seekSeconds = 0;
     mMediaDecoder->finish();
     mAudioQue->finish();
-    mTextureQue->finish();
+    mVideoQue->finish();
     mAudioOutput->finish();
     mVideoOutput->onDestroy();
 }
@@ -79,45 +87,69 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-    while (true) {
-        double audioDuration = mAudioQue->getAllDuration();
-        double videoDuration = mTextureQue->getAllDuration();
-        LOGD("runDecoding audioDuration %lf, videoDuration %lf", audioDuration, videoDuration);
-        if (!isSurfaceCreated || (audioDuration > MAX_BUFFER_DURATION && videoDuration > MAX_BUFFER_DURATION)) {
+    bool isDecodeFinish = false;
+    while (isStarted) {
+        LOGD("rundecoding audioCacheSize %d, videoCacheSize %d", mAudioQue->packetCacheSize(), mVideoQue->packetCacheSize());
+        LOGD("rundecoding audioSize %d, videoSize %d", mAudioQue->size(), mVideoQue->size());
+
+        if (!isSurfaceCreated) { // surface未创建
+            LOGE("rundecoding isSurfaceCreated 进入等待");
             pthread_mutex_lock(&mDecoderMutex);
             pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
             pthread_mutex_unlock(&mDecoderMutex);
-        } else if (!decodeFrame()){
-            break;
+            LOGE("rundecoding isSurfaceCreated 唤醒");
+        } else if (isSeeking) { // 指定进度
+            pthread_mutex_lock(&mDecoderMutex);
+            pthread_mutex_lock(&mAudioMutex);
+            pthread_mutex_lock(&mTextureMutex);
+            mAudioClock = 0;
+            mVideoClock = 0;
+            mMediaDecoder->seek(seekSeconds);
+            seekSeconds = 0;
+            isDecodeFinish = false;
+            mAudioQue->clear();
+            mVideoQue->clear();
+            pthread_mutex_unlock(&mTextureMutex);
+            pthread_mutex_unlock(&mAudioMutex);
+            pthread_mutex_unlock(&mDecoderMutex);
+            isSeeking = false;
+            LOGE("MediaSynchronizer seek 完成");
+        } else if ((mAudioQue->packetCacheSize() >= MAX_CACHE_PACKET_SIZE || mAudioQue->getAllDuration() > MAX_BUFFER_DURATION) &&
+                (mVideoQue->packetCacheSize() >= MAX_CACHE_PACKET_SIZE || mVideoQue->getAllDuration() > MAX_BUFFER_DURATION)) {
+            if (mAudioQue->getAllDuration() > 0 && mVideoQue->getAllDuration() > 0) {
+                pthread_cond_signal(&mAudioCond);
+                pthread_cond_signal(&mTextureCond);
+            }
+            usleep(20 * 1000);
+        } else if (!isDecodeFinish){
+            isDecodeFinish = !decodeFrame();
+            if (mAudioQue->getAllDuration() > 0 && mVideoQue->getAllDuration() > 0) {
+                pthread_cond_signal(&mAudioCond);
+                pthread_cond_signal(&mTextureCond);
+            }
         }
-        pthread_cond_signal(&mTextureCond);
-        pthread_cond_signal(&mAudioCond);
     }
 }
 
 bool MediaSynchronizer::decodeFrame() {
-    pthread_mutex_lock(&mDecoderMutex);
     AVPacket* packet;
     bool result;
     if ((packet = mMediaDecoder->readFrame()) == NULL) {
         result = false;
     } else if (mMediaDecoder->isVideoPacket(packet)) {
-        LOGE("decodeFrame mTextureQue");
-        mTextureQue->push(packet);
+        LOGE("rundecoding decodeFrame mTextureQue");
+        mVideoQue->push(packet);
         result = true;
     } else if (mMediaDecoder->isAudioPacket(packet)){
-        LOGE("decodeFrame mAudioQue");
+        LOGE("rundecoding decodeFrame mAudioQue");
         mAudioQue->push(packet);
         result = true;
     }
-    pthread_mutex_unlock(&mDecoderMutex);
     return result;
 }
 
 void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
     mVideoOutput->onCreated(mwindow);
-    mAudioQue->start(mMediaDecoder);
-    mTextureQue->start(mMediaDecoder);
     isSurfaceCreated = true;
     pthread_cond_signal(&mDecoderCond);
     pthread_cond_signal(&mTextureCond);
@@ -126,13 +158,16 @@ void MediaSynchronizer::onSurfaceCreated(ANativeWindow *mwindow) {
 
 void MediaSynchronizer::onSurfaceSizeChanged(int width, int height) {
     mVideoOutput->onChangeSize(width, height);
+    pthread_cond_signal(&mDecoderCond);
+    pthread_cond_signal(&mTextureCond);
+    pthread_cond_signal(&mAudioCond);
 }
 
 void MediaSynchronizer::onSurfaceDestroy() {
     mVideoOutput->onDestroy();
     mMediaDecoder->finish();
     mAudioQue->finish();
-    mTextureQue->finish();
+    mVideoQue->finish();
     mAudioOutput->finish();
     isSurfaceCreated = false;
     isStarted = false;
@@ -141,13 +176,15 @@ void MediaSynchronizer::onSurfaceDestroy() {
     pthread_cond_signal(&mAudioCond);
 }
 
-TextureFrame *MediaSynchronizer::getTetureFrame() {
+VideoFrame *MediaSynchronizer::getVideoFrame() {
     // 在Video渲染线程获取，不会阻塞主线程
-    TextureFrame * textureFrame = NULL;
-    while (textureFrame == NULL) {
+    VideoFrame * videoFrame = NULL;
+    while (videoFrame == NULL) {
         pthread_mutex_lock(&mTextureMutex);
         // mAudioClock <= 0 保证音频先播放，视频才有基准时间
-        if (isPaused || mAudioClock <= 0 || (textureFrame = mTextureQue->pop())== NULL) {
+        if (isSeeking || isPaused || mAudioClock <= 0 || (videoFrame = mVideoQue->pop())== NULL) {
+            LOGE("getVideoFrame 进入等待");
+            pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
         }
         pthread_mutex_unlock(&mTextureMutex);
@@ -155,10 +192,9 @@ TextureFrame *MediaSynchronizer::getTetureFrame() {
             break;
         }
     }
-    correctTime(textureFrame);
+    correctTime(videoFrame);
     pthread_cond_signal(&mDecoderCond);
-    mVideoOutput->signalRenderFrame();
-    return textureFrame;
+    return videoFrame;
 }
 
 AudioFrame *MediaSynchronizer::getAudioFrame() {
@@ -166,9 +202,9 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
     AudioFrame* audioFrame = NULL;
     while (audioFrame == NULL) {
         pthread_mutex_lock(&mAudioMutex);
-        audioFrame = mAudioQue->pop();
-        if (isPaused || audioFrame == NULL) {
+        if (isSeeking || isPaused || (audioFrame = mAudioQue->pop()) == NULL) {
             LOGE("getAudioFrame 进入等待");
+            pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mAudioCond, &mAudioMutex);
         }
         pthread_mutex_unlock(&mAudioMutex);
@@ -184,19 +220,11 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
 
 void MediaSynchronizer::seek(float seconds) {
     if (isStarted && isSurfaceCreated) {
-        pthread_mutex_lock(&mAudioMutex);
-        mAudioQue->clear();
-        pthread_mutex_unlock(&mAudioMutex);
-
-        pthread_mutex_lock(&mTextureMutex);
-        mTextureQue->clear();
-        pthread_mutex_unlock(&mTextureMutex);
-
-        pthread_mutex_lock(&mDecoderMutex);
-        mMediaDecoder->seek(seconds);
-        pthread_mutex_unlock(&mDecoderMutex);
-
+        isSeeking = true;
+        seekSeconds = seconds;
         pthread_cond_signal(&mDecoderCond);
+        pthread_cond_signal(&mTextureCond);
+        pthread_cond_signal(&mAudioCond);
     }
 }
 
@@ -208,20 +236,20 @@ float MediaSynchronizer::getProgress() {
     return mAudioClock;
 }
 
-void MediaSynchronizer::correctTime(TextureFrame *textureFrame) {
-    if (textureFrame == NULL) {
+void MediaSynchronizer::correctTime(VideoFrame *videoFrame) {
+    if (videoFrame == NULL) {
         return;
     }
-    double pts = textureFrame->timestamp;
-    if (pts == mVideoClock) {
+    double pts = videoFrame->timestamp;
+    if (pts <= mVideoClock) {
         pts = mVideoClock + mVideoDuration;
     }
-
     double delay;
     double diff = pts - mAudioClock;
     if (diff < -MAX_JUDGE_DIFF || diff > MAX_JUDGE_DIFF) {
         delay = 0;
-        textureFrame->isSkip = true;
+        videoFrame->isSkip = true;
+        LOGE("跳帧 videoclock:%lf, audioclock:%lf", mVideoClock, mAudioClock);
     } else if (diff >= MAX_FRAME_DIFF) {
         delay = diff;
     } else {
@@ -232,7 +260,7 @@ void MediaSynchronizer::correctTime(TextureFrame *textureFrame) {
         LOGE("video sleep %ld", delay);
         usleep(delay * 1000000);
     }
-    mVideoDuration = textureFrame->duration;
+    mVideoDuration = videoFrame->duration;
     mVideoClock = pts;
 }
 
@@ -253,6 +281,7 @@ void MediaSynchronizer::pause() {
         isPaused = true;
         pthread_cond_signal(&mDecoderCond);
         pthread_cond_signal(&mTextureCond);
+        pthread_cond_signal(&mAudioCond);
     }
 }
 
@@ -261,5 +290,6 @@ void MediaSynchronizer::resume() {
         isPaused = false;
         pthread_cond_signal(&mDecoderCond);
         pthread_cond_signal(&mTextureCond);
+        pthread_cond_signal(&mAudioCond);
     }
 }

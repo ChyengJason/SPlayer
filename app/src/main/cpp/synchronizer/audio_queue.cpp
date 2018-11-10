@@ -23,9 +23,11 @@ AudioQueue::~AudioQueue() {
 }
 
 void AudioQueue::start(MediaDecoder* decoder) {
-    mMediaDecoder = decoder;
-    mAllDuration = 0;
-    pthread_create(&mDecodeThread, NULL, runDecode, this);
+    if (!isRunning()) {
+        mMediaDecoder = decoder;
+        mAllDuration = 0;
+        pthread_create(&mDecodeThread, NULL, runDecode, this);
+    }
 }
 
 void AudioQueue::push(AVPacket* packet) {
@@ -48,8 +50,9 @@ AudioFrame *AudioQueue::pop() {
 }
 
 void AudioQueue::clear() {
-    pthread_mutex_lock(&mDecodeMutex);
+    mAllDuration = 0;
     LOGD("AuidoQueue 开始清空");
+    pthread_mutex_lock(&mDecodeMutex);
     pthread_mutex_lock(&mFrameQueMutex);
     while(!mAudioFrameQue.empty()) {
         AudioFrame* audioFrame = mAudioFrameQue.front();
@@ -65,9 +68,8 @@ void AudioQueue::clear() {
         mMediaDecoder->freePacket(packet);
     }
     pthread_mutex_unlock(&mPacketMutex);
-    mAllDuration = 0;
-    LOGD("AuidoQueue 完成清空");
     pthread_mutex_unlock(&mDecodeMutex);
+    LOGD("AuidoQueue 完成清空");
 }
 
 int AudioQueue::size() {
@@ -122,4 +124,8 @@ void AudioQueue::runDecodeImpl() {
         }
         pthread_mutex_unlock(&mDecodeMutex);
     }
+}
+
+int AudioQueue::packetCacheSize() {
+    return mPacketQue.size();
 }

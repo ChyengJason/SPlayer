@@ -6,71 +6,38 @@
 #define SPLAYER_VIDEO_QUEUE_H
 
 #include <queue>
-#include <libavcodec/avcodec.h>
-#include "../media_frame.h"
-#include "../egl/egl_core.h"
-#include "../render/gl_base_render.h"
-#include "../render/gl_yuv_render.h"
-#include "../render/gl_watermark_render.h"
 #include "../media_decoder.h"
-
-enum VideoQueueMessageType {
-    VIDEOQUEUE_MESSAGE_CREATE,
-    VIDEOQUEUE_MESSAGE_QUIT,
-    VIDEOQUEUE_MESSAGE_PUSH,
-    VIDEOQUEUE_MESSAGE_CLEAR
-};
-
-struct VideoQueueMessage {
-    VideoQueueMessage(VideoQueueMessageType type) : msgType(type), value(0) {}
-    VideoQueueMessage(VideoQueueMessageType type, void* val) : msgType(type), value(val) {}
-    VideoQueueMessageType msgType;
-    void* value;
-};
 
 class VideoQueue {
 public:
     VideoQueue();
     ~VideoQueue();
+    void start(MediaDecoder* mediaDecoder);
+    void finish();
     void push(AVPacket* packet);
-    TextureFrame* pop();
+    int packetCacheSize();
+    VideoFrame* pop();
     bool isEmpty();
     void clear();
     int size();
-    void start(MediaDecoder* decoder);
-    void finish();
     bool isRunning();
     double getAllDuration();
 
 private:
-    void postMessage(VideoQueueMessage msg);
-    void postMessage(std::vector<VideoQueueMessage> msgs);
-    void createRenderThread();
-    static void* runRender(void *self);
-    void processMessages();
-    void createHandler();
-    void releaseHandler();
-    void renderHandler(void *Frame);
-    void clearHandler();
-    void createSurfaceHandler(int frameWidth, int frameHeight);
+    static void* runDecode(void* self);
+    void runDecodeImpl();
 
 private:
-    pthread_mutex_t mRenderMutex;
-    pthread_cond_t mRenderCond;
-    pthread_t mRenderThread;
-
-    pthread_mutex_t mMessageQueMutex;
-    pthread_mutex_t mTextureQueMutex;
-    std::queue<VideoQueueMessage> mHandlerMessageQueue;
-    std::queue<TextureFrame*> mTextureFrameQue;
-    MediaDecoder *mMediaDecoder;
-    bool isThreadInited;
-    EglCore mEglCore;
-    GlYuvRender mGlRender;
-    EGLContext mContext;
-    EGLSurface mPbufferSurface;
-    int mFbo;
+    bool isFinish;
+    pthread_mutex_t mFrameQueMutex;
+    pthread_mutex_t mPacketMutex;
+    pthread_cond_t mDecodeCond;
+    pthread_t mDecodeThread;
+    pthread_mutex_t mDecodeMutex;
+    std::queue<AVPacket*> mPacketQue;
+    std::queue<VideoFrame*> mVideoFrameQue;
     double mAllDuration;
+    MediaDecoder* mMediaDecoder;
 };
 
 

@@ -9,7 +9,7 @@
 
 class VideoFrame {
 public:
-    VideoFrame():luma(NULL), chromaB(NULL), chromaR(NULL) {}
+    VideoFrame():luma(NULL), chromaB(NULL), chromaR(NULL),isSkip(false) {}
     ~VideoFrame() {
         if (luma) delete (luma);
         if (chromaB) delete (chromaB);
@@ -24,6 +24,7 @@ public:
     int frameHeight;
     int frameWidth;
     double duration;
+    bool isSkip;
 };
 
 class AudioFrame {
