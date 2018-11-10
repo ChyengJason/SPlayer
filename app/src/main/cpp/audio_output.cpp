@@ -44,9 +44,3 @@ bool AudioOutput::getAudioDataCallback(char **data, int *size) {
 	}
     return result;
 }
-
-void AudioOutput::signalRenderFrame() {
-    if (!AudioPlayer::isRunning()) {
-        AudioPlayer::play();
-    }
-}

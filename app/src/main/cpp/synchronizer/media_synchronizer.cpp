@@ -67,12 +67,17 @@ void MediaSynchronizer::finish() {
     isPaused = false;
     isSeeking = false;
     isDecodeFinish = false;
+    isSurfaceCreated = false;
     seekSeconds = 0;
+    mDuration = 0;
+    mVideoClock = 0;
+    mAudioClock = 0;
     mMediaDecoder->finish();
     mAudioQue->finish();
     mVideoQue->finish();
     mAudioOutput->finish();
     mVideoOutput->onDestroy();
+    pthread_cond_signal(&mDecoderCond);
 }
 
 void MediaSynchronizer::startDecodeThread() {
@@ -89,12 +94,15 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-
     isDecodeFinish = false;
     while (isStarted) {
         LOGD("rundecoding audioCacheSize %d, videoCacheSize %d", mAudioQue->packetCacheSize(), mVideoQue->packetCacheSize());
         LOGD("rundecoding audioSize %d, videoSize %d", mAudioQue->size(), mVideoQue->size());
-        if (!isSurfaceCreated) { // surface未创建
+        if (!isStarted) {
+            pthread_cond_signal(&mTextureCond);
+            pthread_cond_signal(&mAudioCond);
+            break;
+        } else if (!isSurfaceCreated) { // surface未创建
             pthread_mutex_lock(&mDecoderMutex);
             pthread_cond_wait(&mDecoderCond, &mDecoderMutex);
             pthread_mutex_unlock(&mDecoderMutex);
@@ -151,14 +159,8 @@ void MediaSynchronizer::onSurfaceSizeChanged(int width, int height) {
 }
 
 void MediaSynchronizer::onSurfaceDestroy() {
-    mVideoOutput->onDestroy();
-    mMediaDecoder->finish();
-    mAudioQue->finish();
-    mVideoQue->finish();
-    mAudioOutput->finish();
-    isSurfaceCreated = false;
-    isStarted = false;
-    pthread_cond_signal(&mDecoderCond);
+    finish();
+    LOGE("onSurfaceDestroy");
 }
 
 VideoFrame *MediaSynchronizer::getVideoFrame() {
@@ -174,6 +176,7 @@ VideoFrame *MediaSynchronizer::getVideoFrame() {
             LOGE("getVideoFrame 进入等待");
             pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mTextureCond, &mTextureMutex);
+            LOGE("getVideoFrame 唤醒");
         }
         if (videoFrame != NULL) {
             correctTime(videoFrame);
@@ -196,6 +199,7 @@ AudioFrame *MediaSynchronizer::getAudioFrame() {
             LOGE("getAudioFrame 进入等待");
             pthread_cond_signal(&mDecoderCond);
             pthread_cond_wait(&mAudioCond, &mAudioMutex);
+            LOGE("getAudioFrame 唤醒");
         }
         if (audioFrame != NULL) {
             correctTime(audioFrame);
@@ -243,7 +247,7 @@ void MediaSynchronizer::correctTime(VideoFrame *videoFrame) {
     }
 
     if (delay > 0) {
-        LOGE("video sleep %ld", delay);
+        LOGE("video sleep %lf", delay);
         usleep(delay * 1000000);
     }
     mVideoDuration = videoFrame->duration;

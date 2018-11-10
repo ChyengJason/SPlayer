@@ -40,6 +40,7 @@ void VideoOutput::onChangeSize(int width, int height) {
 }
 
 void VideoOutput::onDestroy() {
+    LOGE("videoOutput::onDestroy");
     isDestroy = true;
     isCreated = false;
 }
@@ -58,7 +59,6 @@ void VideoOutput::createRunThread() {
 void *VideoOutput::runHandler(void *self) {
     VideoOutput* mOutput = (VideoOutput*) self;
     mOutput->runHandlerImpl();
-    pthread_exit(0);
     return NULL;
 }
 
@@ -70,7 +70,7 @@ void VideoOutput::runHandlerImpl() {
         renderVideoFrameHandler(videoFrame);
     }
     releaseContextHandler();
-    pthread_exit(0);
+    LOGE("VideoOutput is Finish");
 }
 
 void VideoOutput::createContextHandler() {

@@ -23,7 +23,6 @@ public:
     bool pause();
     bool play();
     void finish();
-    void signalRenderFrame();
 
 protected:
     virtual bool getAudioDataCallback(char** data, int* size);

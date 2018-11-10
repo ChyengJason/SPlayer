@@ -44,6 +44,7 @@ private:
     void startDecodeThread();
     static void* runDecoderThread(void* self);
     void runDecoding();
+    void runSeeking();
     bool decodeFrame();
     void correctTime(VideoFrame *videoFrame);
     void correctTime(AudioFrame *audioFrame);
@@ -72,8 +73,6 @@ private:
     double mVideoDuration;
     double mAudioDuration;
     long seekSeconds;
-
-    void runSeeking();
 };
 
 #endif //SPLAYER_VIDEO_SYNCHRONIZER_H
