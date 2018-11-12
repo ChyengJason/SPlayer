@@ -28,8 +28,7 @@ public:
     virtual ~MediaSynchronizer();
     virtual VideoFrame* getVideoFrame();
     virtual AudioFrame* getAudioFrame();
-    void prepare(const char* path);
-    void start();
+    void start(const char* path);
     void finish();
     void seek(float);
     void pause();

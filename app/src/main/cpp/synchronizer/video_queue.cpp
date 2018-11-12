@@ -11,15 +11,11 @@ VideoQueue::VideoQueue()
         , mMediaDecoder(NULL){
     pthread_mutex_init(&mFrameQueMutex, NULL);
     pthread_mutex_init(&mPacketMutex, NULL);
-//    pthread_mutex_init(&mDecodeMutex, NULL);
-//    pthread_cond_init(&mDecodeCond, NULL);
 }
 
 VideoQueue::~VideoQueue() {
     pthread_mutex_destroy(&mPacketMutex);
     pthread_mutex_destroy(&mFrameQueMutex);
-//    pthread_mutex_destroy(&mDecodeMutex);
-//    pthread_cond_destroy(&mDecodeCond);
     mMediaDecoder = NULL;
 }
 
@@ -101,6 +97,7 @@ int VideoQueue::packetCacheSize() {
 }
 
 void VideoQueue::runClearing() {
+    LOGE("VideoQueue::runClearing start");
     pthread_mutex_lock(&mFrameQueMutex);
     pthread_mutex_lock(&mPacketMutex);
     isClearing = true;
@@ -118,6 +115,7 @@ void VideoQueue::runClearing() {
     mAllDuration = 0;
     pthread_mutex_unlock(&mPacketMutex);
     pthread_mutex_unlock(&mFrameQueMutex);
+    LOGE("VideoQueue::runClearing end");
 }
 
 void VideoQueue::runDecoding() {

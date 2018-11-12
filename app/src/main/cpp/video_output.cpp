@@ -63,6 +63,7 @@ void *VideoOutput::runHandler(void *self) {
 }
 
 void VideoOutput::runHandlerImpl() {
+    LOGE("VideoOutput is started");
     createContextHandler();
     changeSizeHandler();
     while (!isDestroy) {

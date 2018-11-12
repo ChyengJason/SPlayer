@@ -17,8 +17,7 @@ MediaPlayerController::~MediaPlayerController() {
 }
 
 void MediaPlayerController::start(const char *path) {
-    mSynchronizer->prepare(path);
-    mSynchronizer->start();
+    mSynchronizer->start(path);
 }
 
 void MediaPlayerController::stop() {

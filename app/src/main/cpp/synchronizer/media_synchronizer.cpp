@@ -24,6 +24,7 @@ MediaSynchronizer::MediaSynchronizer() {
     isSeeking = false;
     isSurfaceCreated = false;
     isPaused = false;
+    mDecoderThread = 0;
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
@@ -38,16 +39,11 @@ MediaSynchronizer::~MediaSynchronizer() {
     delete(mAudioOutput);
 }
 
-void MediaSynchronizer::prepare(const char *path) {
+void MediaSynchronizer::start(const char *path) {
     mMediaDecoder->prepare(path);
+    LOGE(" mMediaDecoder->prepare");
     mDuration = mMediaDecoder->getMediaDuration();
-    isStarted = false;
-}
-
-void MediaSynchronizer::start() {
-    mAudioQue->start(mMediaDecoder);
-    mVideoQue->start(mMediaDecoder);
-    mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
+    LOGE(" mMediaDecoder->getMediaDuration");
     mAudioClock = 0;
     mVideoClock = 0;
     mAudioDuration = 0;
@@ -73,19 +69,18 @@ void MediaSynchronizer::finish() {
     mDuration = 0;
     mVideoClock = 0;
     mAudioClock = 0;
-    mMediaDecoder->finish();
-    mAudioQue->finish();
-    mVideoQue->finish();
-    mAudioOutput->finish();
     mVideoOutput->onDestroy();
+    pthread_cond_signal(&mTextureCond);
     pthread_cond_signal(&mDecoderCond);
     if (mDecoderThread != 0) {
         pthread_join(mDecoderThread, NULL);
         mDecoderThread = 0;
     }
+    LOGE("MediaSynchronizer::finished");
 }
 
 void MediaSynchronizer::startDecodeThread() {
+    LOGE("startDecodeThread");
     int ret = pthread_create(&mDecoderThread, NULL, runDecoderThread, this);
     if (ret != 0) {
         LOGE("创建 DecodeThread 失败");
@@ -99,7 +94,11 @@ void *MediaSynchronizer::runDecoderThread(void *self) {
 }
 
 void MediaSynchronizer::runDecoding() {
-    isDecodeFinish = false;
+    LOGE("runDecoding begin");
+    mAudioQue->start(mMediaDecoder);
+    mVideoQue->start(mMediaDecoder);
+    mAudioOutput->start(mMediaDecoder->getChannelCount(), mMediaDecoder->getSamplerate());
+
     while (isStarted) {
         LOGD("rundecoding audioCacheSize %d, videoCacheSize %d", mAudioQue->packetCacheSize(), mVideoQue->packetCacheSize());
         LOGD("rundecoding audioSize %d, videoSize %d", mAudioQue->size(), mVideoQue->size());
@@ -133,22 +132,33 @@ void MediaSynchronizer::runDecoding() {
     }
     pthread_cond_signal(&mTextureCond);
     pthread_cond_signal(&mAudioCond);
+    mAudioOutput->finish();
+    mVideoQue->finish();
+    mAudioQue->finish();
+    mMediaDecoder->finish();
+    LOGE("sys finished");
 }
 
 bool MediaSynchronizer::decodeFrame() {
     AVPacket* packet;
     bool result;
+    LOGE("decodeFrame begin");
     if ((packet = mMediaDecoder->readFrame()) == NULL) {
         result = false;
     } else if (mMediaDecoder->isVideoPacket(packet)) {
         //LOGE("rundecoding decodeFrame mTextureQue");
+        LOGE("decodeFrame mVideoQue push begin");
         mVideoQue->push(packet);
+        LOGE("decodeFrame mVideoQue push end");
         result = true;
     } else if (mMediaDecoder->isAudioPacket(packet)){
         //LOGE("rundecoding decodeFrame mAudioQue");
+        LOGE("decodeFrame mAudioQue push begin");
         mAudioQue->push(packet);
+        LOGE("decodeFrame mAudioQue push end");
         result = true;
     }
+    LOGE("decodeFrame finish");
     return result;
 }
 
