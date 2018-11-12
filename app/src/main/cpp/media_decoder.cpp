@@ -400,7 +400,7 @@ void MediaDecoder::release() {
     }
     if (mAudioFrame) {
         av_frame_free(&mAudioFrame);
-        av_free(&mAudioFrame);
+        av_free(mAudioFrame);
         mAudioFrame = NULL;
     }
     if (mSwsContext) {
@@ -408,7 +408,7 @@ void MediaDecoder::release() {
         mSwsContext = NULL;
     }
     if (mVideoOutBuffer) {
-        delete mAudioOutBuffer;
+        delete mVideoOutBuffer;
         mVideoOutBuffer = NULL;
     }
     if (mSwrContext) {
@@ -416,7 +416,7 @@ void MediaDecoder::release() {
         mSwrContext = NULL;
     }
     if (mAudioOutBuffer) {
-        av_free(mAudioOutBuffer);
+        delete mAudioOutBuffer;
         mAudioOutBuffer = NULL;
     }
     if (mAudioCodecContext) {

@@ -102,6 +102,7 @@ void AudioQueue::runClearing() {
     LOGD("AudioQueue 开始清空");
     pthread_mutex_lock(&mFrameQueMutex);
     pthread_mutex_lock(&mPacketMutex);
+    isClearing = true;
     while(!mAudioFrameQue.empty()) {
         AudioFrame* audioFrame = mAudioFrameQue.front();
         mAudioFrameQue.pop();

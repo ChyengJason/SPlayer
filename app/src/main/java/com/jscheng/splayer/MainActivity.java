@@ -102,11 +102,11 @@ public class MainActivity extends BaseActivity implements SurfaceHolder.Callback
         if (!storePermission) {
             return;
         }
-        MediaUtil.pickVideoFile(this, REQUEST_PICK);
-//        mOpenBtn.setVisibility(View.GONE);
-//        mVideoPlayer.start(StorageUtil.getSDPath() + "/media.mp4");
-//        mProgressView.setDuration(mVideoPlayer.getDuration());
-//        mHandler.sendEmptyMessageDelayed(PROGRESS_MSG, 1000L);
+//        MediaUtil.pickVideoFile(this, REQUEST_PICK);
+        mOpenBtn.setVisibility(View.GONE);
+        mVideoPlayer.start(StorageUtil.getSDPath() + "/media.mp4");
+        mProgressView.setDuration(mVideoPlayer.getDuration());
+        mHandler.sendEmptyMessageDelayed(PROGRESS_MSG, 1000L);
     }
 
     @Override

@@ -23,6 +23,7 @@ MediaSynchronizer::MediaSynchronizer() {
     seekSeconds = 0;
     isSeeking = false;
     isSurfaceCreated = false;
+    isPaused = false;
 }
 
 MediaSynchronizer::~MediaSynchronizer() {
@@ -78,6 +79,10 @@ void MediaSynchronizer::finish() {
     mAudioOutput->finish();
     mVideoOutput->onDestroy();
     pthread_cond_signal(&mDecoderCond);
+    if (mDecoderThread != 0) {
+        pthread_join(mDecoderThread, NULL);
+        mDecoderThread = 0;
+    }
 }
 
 void MediaSynchronizer::startDecodeThread() {
@@ -284,16 +289,17 @@ void MediaSynchronizer::runSeeking() {
     pthread_mutex_lock(&mDecoderMutex);
     pthread_mutex_lock(&mAudioMutex);
     pthread_mutex_lock(&mTextureMutex);
+    isSeeking = true;
     mAudioClock = 0;
     mVideoClock = 0;
-    mMediaDecoder->seek(seekSeconds);
-    seekSeconds = 0;
     isDecodeFinish = false;
     mAudioQue->clear();
     mVideoQue->clear();
     while (mAudioQue->clearing() || mVideoQue->clearing()) {
         usleep(20* 1000);
     }
+    mMediaDecoder->seek(seekSeconds);
+    seekSeconds = 0;
     pthread_mutex_unlock(&mTextureMutex);
     pthread_mutex_unlock(&mAudioMutex);
     pthread_mutex_unlock(&mDecoderMutex);

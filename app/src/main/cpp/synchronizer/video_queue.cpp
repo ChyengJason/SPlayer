@@ -7,14 +7,19 @@
 
 VideoQueue::VideoQueue()
         : isFinish(true)
+        , isClearing(false)
         , mMediaDecoder(NULL){
     pthread_mutex_init(&mFrameQueMutex, NULL);
     pthread_mutex_init(&mPacketMutex, NULL);
+//    pthread_mutex_init(&mDecodeMutex, NULL);
+//    pthread_cond_init(&mDecodeCond, NULL);
 }
 
 VideoQueue::~VideoQueue() {
     pthread_mutex_destroy(&mPacketMutex);
     pthread_mutex_destroy(&mFrameQueMutex);
+//    pthread_mutex_destroy(&mDecodeMutex);
+//    pthread_cond_destroy(&mDecodeCond);
     mMediaDecoder = NULL;
 }
 
@@ -30,6 +35,7 @@ void VideoQueue::push(AVPacket* packet) {
     pthread_mutex_lock(&mPacketMutex);
     mPacketQue.push(packet);
     pthread_mutex_unlock(&mPacketMutex);
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 VideoFrame *VideoQueue::pop() {
@@ -46,6 +52,8 @@ VideoFrame *VideoQueue::pop() {
 
 void VideoQueue::clear() {
     isClearing = true;
+    LOGE("VideoQueue 设置clear");
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 int VideoQueue::size() {
@@ -58,6 +66,7 @@ bool VideoQueue::isEmpty() {
 
 void VideoQueue::finish() {
     isFinish = true;
+//    pthread_cond_signal(&mDecodeCond);
 }
 
 bool VideoQueue::isRunning() {
@@ -83,6 +92,7 @@ void VideoQueue::runDecodeImpl() {
             runDecoding();
         }
     }
+    LOGE("VideoQueue::runDecodeImpl finish");
     runClearing();
 }
 
@@ -91,24 +101,23 @@ int VideoQueue::packetCacheSize() {
 }
 
 void VideoQueue::runClearing() {
-    LOGD("VideoQueue 开始清空");
-    pthread_mutex_lock(&mPacketMutex);
     pthread_mutex_lock(&mFrameQueMutex);
-    while(!mPacketQue.empty()) {
-        AVPacket* packet = mPacketQue.front();
-        mPacketQue.pop();
-        mMediaDecoder->freePacket(packet);
-    }
+    pthread_mutex_lock(&mPacketMutex);
+    isClearing = true;
     while(!mVideoFrameQue.empty()) {
         VideoFrame* audioFrame = mVideoFrameQue.front();
         mVideoFrameQue.pop();
         delete(audioFrame);
     }
+    while(!mPacketQue.empty()) {
+        AVPacket* packet = mPacketQue.front();
+        mPacketQue.pop();
+        mMediaDecoder->freePacket(packet);
+    }
     isClearing = false;
     mAllDuration = 0;
-    pthread_mutex_unlock(&mFrameQueMutex);
     pthread_mutex_unlock(&mPacketMutex);
-    LOGD("VideoQueue 完成清空");
+    pthread_mutex_unlock(&mFrameQueMutex);
 }
 
 void VideoQueue::runDecoding() {
@@ -121,7 +130,6 @@ void VideoQueue::runDecoding() {
         mMediaDecoder->freePacket(packet);
     }
     pthread_mutex_unlock(&mPacketMutex);
-
     pthread_mutex_lock(&mFrameQueMutex);
     for (int i = 0; i < frames.size(); ++i) {
         mVideoFrameQue.push(frames[i]);
